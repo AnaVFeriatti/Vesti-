@@ -94,6 +94,16 @@ public class OutfitGenerator
          "suéter", "sueter", "tricô", "trico", "blazer", "casaqueto", "jaqueta"];
     private static readonly string[] OpenLayerWords = ["cardigan", "kimono", "quimono", "colete", "blazer", "casaqueto", "jaqueta", "overshirt"];
 
+    /// <summary>
+    /// Sneakers at work: allowed unless the person turned on the "Sem tênis" rule for work.
+    /// When allowed, their low formality doesn't drag the work look down.
+    /// </summary>
+    public static bool SneakerOkAtWork(ClothingItem i, Occasion occasion, IReadOnlySet<DressRule> rules) =>
+        occasion == Occasion.Work && i.Category == Category.Shoes && Has(i, ["tênis", "tenis"]) && !rules.Contains(DressRule.NoSneakers);
+
+    private static double FormalityFor(ClothingItem i, Occasion occasion, IReadOnlySet<DressRule> rules, double target) =>
+        SneakerOkAtWork(i, occasion, rules) ? Math.Max(i.Formality, target - 0.5) : i.Formality;
+
     private static bool Has(ClothingItem i, string[] words) =>
         words.Any(w => (i.SubType?.Contains(w, StringComparison.OrdinalIgnoreCase) ?? false)
                     || i.Name.Contains(w, StringComparison.OrdinalIgnoreCase));
@@ -154,8 +164,8 @@ public class OutfitGenerator
 
         double PieceFit(ClothingItem i)
         {
-            var s = -Math.Abs(i.Formality - profile.TargetFormality);
-            if (profile.PreferredStyles.Contains(i.Style)) s += 1.5;
+            var s = -Math.Abs(FormalityFor(i, req.Occasion, rules, profile.TargetFormality) - profile.TargetFormality);
+            if (profile.PreferredStyles.Contains(i.Style) || SneakerOkAtWork(i, req.Occasion, rules)) s += 1.5;
             if (profile.RequiresSporty && i.Style != Style.Sporty && i.Category is Category.Top or Category.Bottom) s -= 4;
             if (i.Category != Category.Outerwear && i.Category != Category.Accessory)
                 s -= Math.Abs(i.Warmth - ideal) * 0.5;
@@ -403,9 +413,11 @@ public class OutfitGenerator
 
         // Formality and style.
         var wearables = all.Where(i => i.Category != Category.Accessory).ToList();
-        var formalityGap = wearables.Average(i => Math.Abs(i.Formality - profile.TargetFormality));
+        double Fm(ClothingItem i) => FormalityFor(i, req.Occasion, ctx.Rules, profile.TargetFormality);
+        var formalityGap = wearables.Average(i => Math.Abs(Fm(i) - profile.TargetFormality));
         score -= formalityGap * 2;
-        var styleShare = wearables.Count(i => profile.PreferredStyles.Contains(i.Style)) / (double)wearables.Count;
+        var styleShare = wearables.Count(i => profile.PreferredStyles.Contains(i.Style)
+                                              || SneakerOkAtWork(i, req.Occasion, ctx.Rules)) / (double)wearables.Count;
         score += styleShare * 2;
         if (profile.RequiresSporty && core.Any(i => i.Style != Style.Sporty)) score -= 6;
         if (formalityGap <= 0.75 && styleShare >= 0.5)
@@ -425,7 +437,7 @@ public class OutfitGenerator
         foreach (var i in wearables)
         {
             if (!relaxedOccasion && i.Style is Style.Sporty or Style.Beach && i.Category != Category.Outerwear) score -= 1.5;
-            if (profile.TargetFormality - i.Formality >= 2) score -= 1.0;
+            if (profile.TargetFormality - Fm(i) >= 2) score -= 1.0;
         }
 
         // Styles that clash: sporty pieces in a formal look and vice versa.
@@ -599,7 +611,9 @@ public class OutfitGenerator
             if (shoes.Warmth >= 4 && t >= 26) s -= 1.0; // boots in the heat
             if (shoes.Warmth >= 4 && t < 17) { s += 0.5; reasons.Add(PShoe, $"{shoes.Name} esquenta os pés"); }
             var sneaker = Has(shoes, ["tênis", "tenis"]);
-            if (sneaker && req.Occasion is Occasion.Work or Occasion.Formal) s -= 0.8;
+            var sneakerOk = SneakerOkAtWork(shoes, req.Occasion, req.Preferences?.For(req.Occasion) ?? new HashSet<DressRule>());
+            if (sneaker && !sneakerOk && req.Occasion is Occasion.Work or Occasion.Formal) s -= 0.8;
+            if (sneakerOk) reasons.Add(PShoe - 6, $"{shoes.Name}: tênis liberado no seu trabalho, confortável o dia todo");
             if (req.Occasion is Occasion.Gym && shoes.SubType is { } g && !g.Contains("tênis", StringComparison.OrdinalIgnoreCase)) s -= 3;
 
             var shoeColor = shoes.PrimaryColor;

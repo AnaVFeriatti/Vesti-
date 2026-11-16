@@ -181,4 +181,26 @@ public class OutfitGeneratorTests
         Assert.Equal(DressRule.NoSkirts, StylePreferences.Breaks(skirt, rules));
         Assert.Null(StylePreferences.Breaks(pants, rules));
     }
+
+    [Fact]
+    public void Sneakers_are_fine_at_work_unless_the_rule_says_otherwise()
+    {
+        var w = new List<ClothingItem>
+        {
+            Item("Camisa branca", Category.Top, "branco", Style.SmartCasual, 2, 4),
+            Item("Calça preta", Category.Bottom, "preto", Style.SmartCasual, 3, 4),
+            Item("Tênis All Star branco", Category.Shoes, "branco", Style.Casual, 2, 1),
+        };
+        w[2].SubType = "tênis";
+        var allowed = new StylePreferences();
+        allowed.Rules[Occasion.Work] = [];
+        var look = _gen.Suggest(w, new Dictionary<int, DateOnly>(), new(Occasion.Work, 24, false, Today, 1, 0, allowed))[0];
+        Assert.Contains(look.Items, i => i.SubType == "tênis");
+        Assert.Contains(look.Reasons, r => r.Contains("tênis liberado"));
+
+        var banned = new StylePreferences();
+        banned.Rules[Occasion.Work] = [DressRule.NoSneakers];
+        Assert.DoesNotContain(_gen.Suggest(w, new Dictionary<int, DateOnly>(), new(Occasion.Work, 24, false, Today, 1, 0, banned))
+            .SelectMany(l => l.Items), i => i.SubType == "tênis");
+    }
 }
