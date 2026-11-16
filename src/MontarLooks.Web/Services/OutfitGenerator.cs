@@ -278,12 +278,21 @@ public class OutfitGenerator
             var bestLeft = valid.Max(c => c.Score);
             // Only trade a little quality for novelty.
             var next = valid.Where(c => c.Score >= bestLeft - 1.2)
-                .Select(c => (c, adj: c.Score - 1.5 * c.Look.MainIds.Count(usedMain.Contains)))
+                .Select(c => (c, adj: c.Score - 1.5 * c.Look.MainIds.Count(usedMain.Contains) - ShoeRepeat(c.Look, chosen)))
                 .OrderByDescending(x => x.adj)
                 .Select(x => x.c)
                 .First();
             chosen.Add(next);
             pool.Remove(next);
+        }
+
+        // Shoes vary too: the same pair (or the same kind, e.g. boots) in every suggestion feels repetitive.
+        static double ShoeRepeat(Look look, List<Candidate> picked)
+        {
+            if (look.Shoes is not { } sh) return 0;
+            static string Kind(ClothingItem i) => (i.SubType ?? i.Name).Split(' ', '-')[0].ToLowerInvariant();
+            return picked.Count(p => p.Look.Shoes?.Id == sh.Id) * 1.0
+                 + picked.Count(p => p.Look.Shoes is { } o && o.Id != sh.Id && Kind(o) == Kind(sh)) * 0.4;
         }
 
         return chosen.Select((c, idx) => new OutfitSuggestion(
@@ -608,8 +617,10 @@ public class OutfitGenerator
             if (open && t < 18) s -= 1.2;
             if (open && req.IsRainy) s -= 0.8;
             if (open && t >= 26) { s += 0.4; reasons.Add(PShoe - 2, $"{shoes.Name} deixa o pé respirar no calor"); }
-            if (shoes.Warmth >= 4 && t >= 26) s -= 1.0; // boots in the heat
-            if (shoes.Warmth >= 4 && t < 17) { s += 0.5; reasons.Add(PShoe, $"{shoes.Name} esquenta os pés"); }
+            // Feet heat up regardless of how cold the person feels: boots follow the real temperature.
+            var realT = req.TemperatureC;
+            if (shoes.Warmth >= 4 && realT >= 24) s -= 1.0; // boots in the heat
+            if (shoes.Warmth >= 4 && realT < 18 && t < 17) { s += 0.4; reasons.Add(PShoe, $"{shoes.Name} esquenta os pés"); }
             var sneaker = Has(shoes, ["tênis", "tenis"]);
             var sneakerOk = SneakerOkAtWork(shoes, req.Occasion, req.Preferences?.For(req.Occasion) ?? new HashSet<DressRule>());
             if (sneaker && !sneakerOk && req.Occasion is Occasion.Work or Occasion.Formal) s -= 0.8;

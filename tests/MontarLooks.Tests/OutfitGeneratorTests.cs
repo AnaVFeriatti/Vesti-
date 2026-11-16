@@ -203,4 +203,33 @@ public class OutfitGeneratorTests
         Assert.DoesNotContain(_gen.Suggest(w, new Dictionary<int, DateOnly>(), new(Occasion.Work, 24, false, Today, 1, 0, banned))
             .SelectMany(l => l.Items), i => i.SubType == "tênis");
     }
+
+    [Fact]
+    public void Work_suggestions_vary_the_shoes_instead_of_always_boots()
+    {
+        var w = new List<ClothingItem>
+        {
+            Item("Blusa gola alta preta", Category.Top, "preto", Style.SmartCasual, 3, 3),
+            Item("Camisa branca", Category.Top, "branco", Style.SmartCasual, 2, 4),
+            Item("Blusa canelada rosa", Category.Top, "rosa", Style.SmartCasual, 2, 3),
+            Item("Calça jeans reta", Category.Bottom, "jeans", Style.Casual, 3, 2),
+            Item("Calça preta reta", Category.Bottom, "preto", Style.SmartCasual, 3, 3),
+            Item("Calça jeans flare", Category.Bottom, "jeans", Style.Casual, 3, 2),
+            Item("Bota preta cano alto", Category.Shoes, "preto", Style.SmartCasual, 4, 3),
+            Item("Coturno preto", Category.Shoes, "preto", Style.Streetwear, 4, 2),
+            Item("Tênis All Star branco", Category.Shoes, "branco", Style.Casual, 2, 1),
+            Item("Tênis Vans preto", Category.Shoes, "preto", Style.Streetwear, 2, 1),
+            Item("Mocassim preto", Category.Shoes, "preto", Style.SmartCasual, 2, 3),
+        };
+        w[6].SubType = "bota"; w[7].SubType = "coturno"; w[8].SubType = "tênis"; w[9].SubType = "tênis"; w[10].SubType = "mocassim";
+        var prefs = new StylePreferences { ColdBelowC = 25 };
+        prefs.Rules[Occasion.Work] = [DressRule.NoStraps, DressRule.NoNeckline, DressRule.NoSkirts, DressRule.NoOpenShoes];
+        for (var seed = 0; seed < 5; seed++)
+        {
+            var looks = _gen.Suggest(w, new Dictionary<int, DateOnly>(), new(Occasion.Work, 24, false, Today, 3, seed, prefs));
+            var shoes = looks.Select(l => l.Items.First(i => i.Category == Category.Shoes)).ToList();
+            Assert.True(shoes.Select(x => x.Id).Distinct().Count() >= 2, $"seed {seed}: {string.Join(", ", shoes.Select(x => x.Name))}");
+            Assert.True(shoes.Count(x => x.SubType is "bota" or "coturno") <= 1, $"seed {seed}: {string.Join(", ", shoes.Select(x => x.Name))}");
+        }
+    }
 }
