@@ -11,7 +11,10 @@
 }
 <link rel="stylesheet" href="~/css/planner.css" asp-append-version="true" />
 
-<h1 class="h3 mb-3 planner-title">Mala de viagem</h1>
+<div class="mb-4">
+    <h1 class="h3 mb-1">Mala de viagem</h1>
+    <p class="text-muted mb-0">Poucas peças que combinam entre si, escolhidas pela previsão do tempo do destino.</p>
+</div>
 
 <div class="row g-4">
     <div class="col-lg-4">
@@ -186,6 +189,14 @@
                         <h2 class="h5 mb-0">Checklist da mala</h2>
                         <span class="small text-muted" id="pack-count" aria-live="polite"></span>
                     </div>
+                    @{ var dirtyInBag = r.Items.Count(i => Model.Dirty.Contains(i.Id)); }
+                    @if (dirtyInBag > 0)
+                    {
+                        <p class="small mb-2">
+                            🧺 @(dirtyInBag == 1 ? "1 peça da mala está" : $"{dirtyInBag} peças da mala estão") no cesto de roupa suja.
+                            Lave antes de viajar (depois marque como lavada na <a asp-page="/Laundry">lavanderia</a>).
+                        </p>
+                    }
                     <ul class="trip-checklist list-unstyled mb-3" data-key="@checkKey">
                         @foreach (var it in r.Items)
                         {
@@ -196,6 +207,7 @@
                                     <span>
                                         <span class="d-block fw-semibold">@it.Name</span>
                                         <span class="small text-muted">@it.Category.DisplayName()</span>
+                                        @if (Model.Dirty.Contains(it.Id)) { <span class="badge rounded-pill planner-dirty ms-1">lavar antes</span> }
                                     </span>
                                 </label>
                             </li>

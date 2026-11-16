@@ -38,7 +38,9 @@ public class PlanDay
 }
 
 /// <summary>What the planner needs to dress one day.</summary>
-public record PlanDayInput(DateOnly Date, Occasion Occasion, double TemperatureC, bool IsRainy, bool Locked, IReadOnlyList<int> LockedItemIds, int Seed = 0);
+/// <param name="MinC">Day's (feels-like) minimum, so the engine can add a removable layer when the day swings.</param>
+public record PlanDayInput(DateOnly Date, Occasion Occasion, double TemperatureC, bool IsRainy, bool Locked, IReadOnlyList<int> LockedItemIds, int Seed = 0,
+    double? MinC = null, double? MaxC = null);
 
 public record PlannedLook(DateOnly Date, IReadOnlyList<ClothingItem> Items, string? Title);
 
@@ -118,7 +120,9 @@ public class PlannerService(OutfitGenerator generator)
         IReadOnlyList<PlanDayInput> days,
         StylePreferences prefs,
         DateOnly? onlyDate = null,
-        IReadOnlyDictionary<DateOnly, IReadOnlyList<int>>? currentItems = null)
+        IReadOnlyDictionary<DateOnly, IReadOnlyList<int>>? currentItems = null,
+        IReadOnlyList<LookFeedback>? feedback = null,
+        PersonalPalette? palette = null)
     {
         var byId = wardrobe.ToDictionary(i => i.Id);
         var result = new Dictionary<DateOnly, PlannedLook>();
@@ -142,7 +146,14 @@ public class PlannerService(OutfitGenerator generator)
                 foreach (var i in l.Items)
                     if (!worn.TryGetValue(i.Id, out var w) || w < l.Date) worn[i.Id] = l.Date;
 
-            var req = new OutfitRequest(d.Occasion, d.TemperatureC, d.IsRainy, d.Date, 1, d.Seed + d.Date.DayNumber, prefs);
+            var req = new OutfitRequest(d.Occasion, d.TemperatureC, d.IsRainy, d.Date, 1, d.Seed + d.Date.DayNumber, prefs)
+            {
+                // Same taste and color learning as the look of the day.
+                Feedback = feedback,
+                Palette = palette,
+                MinC = d.MinC,
+                MaxC = d.MaxC
+            };
             var fresh = wardrobe.Where(i => !(IsMain(i) && usedMain.Contains(i.Id))).ToList();
             // Prefer fresh main pieces, but repeating one beats a clearly worse look
             // (small wardrobes run out of fresh pieces). Each repeated main piece costs points.

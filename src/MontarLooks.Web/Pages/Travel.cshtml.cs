@@ -40,6 +40,8 @@ public class TravelModel(
     public List<Trip> SavedTrips { get; private set; } = [];
     public Trip? Saved { get; private set; }
     public int WardrobeCount { get; private set; }
+    /// <summary>Pieces in the laundry basket: they still go in the bag, with a "wash first" note.</summary>
+    public HashSet<int> Dirty { get; private set; } = [];
 
     public async Task OnGetAsync(CancellationToken ct)
     {
@@ -62,14 +64,19 @@ public class TravelModel(
 
         var items = await WardrobeAsync(ct);
         var days = await TripDaysAsync(ct);
+        var palette = await store.PaletteAsync();
+        var feedback = await store.FeedbackAsync();
+        Dirty = await store.DirtyAsync();
         if (Saved != null)
         {
-            var ids = Saved.ItemIds.ToHashSet();
-            Result = travel.FromItems(items.Where(i => ids.Contains(i.Id)).ToList(), days, Prefs);
+            // Keep the saved order, so the packing checklist (stored per browser) survives the save.
+            var byId = items.ToDictionary(i => i.Id);
+            var bag = Saved.ItemIds.Where(byId.ContainsKey).Select(id => byId[id]).ToList();
+            Result = travel.FromItems(bag, days, Prefs, palette, feedback);
         }
         else
         {
-            Result = travel.Build(items, days, Prefs);
+            Result = travel.Build(items, days, Prefs, palette, feedback);
         }
 
         var felt = days.Select(d => d.TemperatureC - Prefs.ComfortOffset).DefaultIfEmpty(24).ToList();
@@ -82,7 +89,8 @@ public class TravelModel(
         Normalize();
         Prefs = await settings.GetPreferencesAsync();
         if (!await ResolvePlaceAsync(ct) || Place == null) return RedirectToPage();
-        var capsule = travel.Build(await WardrobeAsync(ct), await TripDaysAsync(ct), Prefs);
+        var capsule = travel.Build(await WardrobeAsync(ct), await TripDaysAsync(ct), Prefs,
+            await store.PaletteAsync(), await store.FeedbackAsync());
         var trips = await TripsAsync();
         var trip = new Trip
         {
@@ -142,7 +150,11 @@ public class TravelModel(
         var found = await weather.SearchCitiesAsync(Destination, ct);
         if (found.Count == 0) { NotFound = true; return false; }
         Place = found[0];
-        OtherPlaces = found.Skip(1).Take(4).ToList();
+        // The geocoder often returns the same label twice (city and municipality): list each place once.
+        OtherPlaces = found.Skip(1)
+            .Where(p => !string.Equals(p.Label, Place.Label, StringComparison.OrdinalIgnoreCase))
+            .DistinctBy(p => p.Label, StringComparer.OrdinalIgnoreCase)
+            .Take(4).ToList();
         return true;
     }
 
@@ -162,7 +174,7 @@ public class TravelModel(
             var date = Start!.Value.AddDays(i);
             var f = byDate.GetValueOrDefault(date);
             if (f == null) HasEstimate = true;
-            var day = new TripDay(date, f?.DressingTemperature ?? avgTemp, f?.IsRainy ?? rainyShare >= 0.4, occ[i]);
+            var day = new TripDay(date, f?.DressingTemperature ?? avgTemp, f?.IsRainy ?? rainyShare >= 0.4, occ[i], f?.FeelsMinC, f?.FeelsMaxC);
             days.Add(day);
             Weather.Add((day, f));
         }

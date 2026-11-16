@@ -16,7 +16,10 @@
 <link rel="stylesheet" href="~/css/insights.css" asp-append-version="true" />
 
 <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
-    <h1 class="h3 mb-0">Wrapped do mês</h1>
+    <div>
+        <h1 class="h3 mb-1">Wrapped do mês</h1>
+        <p class="text-muted mb-0">O resumo divertido dos looks que você registrou no mês.</p>
+    </div>
     <nav class="d-flex align-items-center gap-2" aria-label="Escolher mês">
         @if (Model.Previous is { } prev)
         {

@@ -17,7 +17,8 @@ public class Trip
 }
 
 /// <summary>Weather assumed for one day of the trip.</summary>
-public record TripDay(DateOnly Date, double TemperatureC, bool IsRainy, Occasion Occasion);
+/// <param name="MinC">Feels-like minimum from the forecast (null for estimated days).</param>
+public record TripDay(DateOnly Date, double TemperatureC, bool IsRainy, Occasion Occasion, double? MinC = null, double? MaxC = null);
 
 public record TripLook(DateOnly Date, Occasion Occasion, IReadOnlyList<OutfitSuggestion> Looks);
 
@@ -89,12 +90,14 @@ public class TravelService(OutfitGenerator generator)
     /// <summary>
     /// Picks the capsule. <paramref name="tripDays"/> carries each day's weather and occasion.
     /// </summary>
-    public Capsule Build(IReadOnlyList<ClothingItem> wardrobe, IReadOnlyList<TripDay> tripDays, StylePreferences prefs)
+    public Capsule Build(IReadOnlyList<ClothingItem> wardrobe, IReadOnlyList<TripDay> tripDays, StylePreferences prefs,
+        PersonalPalette? palette = null, IReadOnlyList<LookFeedback>? feedback = null)
     {
         if (tripDays.Count == 0) return new Capsule([], 0, []);
         var occasions = tripDays.Select(d => d.Occasion).Distinct().ToList();
         var felt = tripDays.Select(d => d.TemperatureC - prefs.ComfortOffset).ToList();
-        var coldest = felt.Min();
+        // Cold mornings/evenings decide the jacket even when the day itself is warm.
+        var coldest = tripDays.Min(d => Math.Min(d.MinC ?? d.TemperatureC, d.TemperatureC) - prefs.ComfortOffset);
         var warmest = felt.Max();
         var rainy = tripDays.Any(d => d.IsRainy);
         var t = TargetsFor(tripDays.Count, coldest < 18, rainy, coldest < 12);
@@ -202,11 +205,12 @@ public class TravelService(OutfitGenerator generator)
 
         var capsule = chosenOuter.Concat(chosenTops).Concat(chosenOnes).Concat(chosenBottoms).Concat(chosenShoes).ToList();
 
-        return FromItems(capsule, tripDays, prefs);
+        return FromItems(capsule, tripDays, prefs, palette, feedback);
     }
 
     /// <summary>Capsule from a fixed set of pieces (e.g. a saved trip): counts looks and dresses each day.</summary>
-    public Capsule FromItems(IReadOnlyList<ClothingItem> capsule, IReadOnlyList<TripDay> tripDays, StylePreferences prefs)
+    public Capsule FromItems(IReadOnlyList<ClothingItem> capsule, IReadOnlyList<TripDay> tripDays, StylePreferences prefs,
+        PersonalPalette? palette = null, IReadOnlyList<LookFeedback>? feedback = null)
     {
         // Example looks per day, rotating pieces through the trip.
         var worn = new Dictionary<int, DateOnly>();
@@ -214,7 +218,13 @@ public class TravelService(OutfitGenerator generator)
         for (int i = 0; i < tripDays.Count; i++)
         {
             var d = tripDays[i];
-            var looks = generator.Suggest(capsule, worn, new OutfitRequest(d.Occasion, d.TemperatureC, d.IsRainy, d.Date, 2, i * 7 + 1, prefs));
+            var looks = generator.Suggest(capsule, worn, new OutfitRequest(d.Occasion, d.TemperatureC, d.IsRainy, d.Date, 2, i * 7 + 1, prefs)
+            {
+                Palette = palette,
+                Feedback = feedback,
+                MinC = d.MinC,
+                MaxC = d.MaxC
+            });
             if (looks.Count > 0)
                 foreach (var it in looks[0].Items) worn[it.Id] = d.Date;
             dayLooks.Add(new TripLook(d.Date, d.Occasion, looks));

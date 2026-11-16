@@ -7,9 +7,23 @@
 @{
     var p = Model.Prefs;
     ClothingItem? Of(Category c) => Model.Items.FirstOrDefault(i => i.Category == c);
-    var top = Of(Category.Top);
     var bottom = Of(Category.Bottom);
     var one = Of(Category.OnePiece);
+    // Tops: the base one goes on the body; a second top (cardigan, suéter, camisa aberta) is drawn
+    // open over it, like the jacket. The piece the engine considers a layer wins; if that is not
+    // decisive, follow the engine's order (outerwear, then the layer, then the base top).
+    var tops = Model.Items.Where(i => i.Category == Category.Top).ToList();
+    ClothingItem? top = null, layer = null;
+    if (one != null)
+        layer = tops.FirstOrDefault(OutfitGenerator.IsLayerPiece) ?? tops.FirstOrDefault(); // cardigan over a dress
+    else if (tops.Count >= 2)
+    {
+        var flagged = tops.Where(OutfitGenerator.IsLayerPiece).ToList();
+        layer = flagged.Count == 1 ? flagged[0] : tops[0];
+        top = tops.First(t => t.Id != layer.Id);
+    }
+    else
+        top = tops.FirstOrDefault();
     var outer = Of(Category.Outerwear);
     var shoes = Of(Category.Shoes);
     var acc = Of(Category.Accessory);
@@ -32,9 +46,21 @@
     string Img(ClothingItem i, string zone, string cls) => i.PhotoFileName is { } f
         ? $"<img class=\"mq-piece {cls}\" style=\"{zone}\" src=\"/uploads/{f}\" alt=\"{System.Net.WebUtility.HtmlEncode(i.Name)}\" loading=\"lazy\" />"
         : $"<div class=\"mq-piece mq-swatch {cls}\" style=\"{zone};background:{ColorPalette.Get(i.PrimaryColor).Hex}\" title=\"{System.Net.WebUtility.HtmlEncode(i.Name)}\"></div>";
+    // Open layer: the same piece split in two front panels, leaving the base top visible in the middle.
+    string OpenLayer(ClothingItem i, string zone)
+    {
+        var name = System.Net.WebUtility.HtmlEncode(i.Name);
+        string Half(string side, bool decorative) => i.PhotoFileName is { } f
+            ? $"<img class=\"mq-piece mq-layer mq-layer-{side}\" style=\"{zone}\" src=\"/uploads/{f}\" alt=\"{(decorative ? "" : name)}\" loading=\"lazy\" />"
+            : $"<div class=\"mq-piece mq-swatch mq-layer mq-layer-{side}\" style=\"{zone};background:{ColorPalette.Get(i.PrimaryColor).Hex}\" title=\"{name}\"></div>";
+        return Half("l", false) + Half("r", true);
+    }
     var hairLong = p.Hair is HairStyle.Long or HairStyle.Curly;
+    var label = Model.Items.Any()
+        ? "Prévia no avatar: " + string.Join(", ", Model.Items.Select(i => i.Name))
+        : "Prévia do seu avatar";
 }
-<div class="mannequin @(Model.Compact ? "mq-compact" : "") @(p.BodyPhoto != null ? "mq-photo" : "")" style="--skin:@p.SkinTone;--hair:@p.HairColor" aria-label="Prévia do look no avatar">
+<div class="mannequin @(Model.Compact ? "mq-compact" : "") @(p.BodyPhoto != null ? "mq-photo" : "")" style="--skin:@p.SkinTone;--hair:@p.HairColor" role="img" aria-label="@label">
     @if (p.BodyPhoto != null)
     {
         <img class="mq-body-photo" src="/uploads/@p.BodyPhoto" alt="" />
@@ -80,8 +106,19 @@
         @if (one != null) { @Html.Raw(Img(one, OnePieceZone(one), "mq-one")) }
         @if (bottom != null && one == null) { @Html.Raw(Img(bottom, BottomZone(bottom), "mq-bottom")) }
         @if (top != null && one == null) { @Html.Raw(Img(top, TopZone(top), "mq-top")) }
+        @if (layer != null) { @Html.Raw(OpenLayer(layer, one != null ? Zone(16, 20, 68, 40) : Zone(16, 20, 68, 33))) }
         @if (outer != null) { @Html.Raw(Img(outer, Zone(14, 19, 72, 36), "mq-outer")) }
-        @if (acc != null) { @Html.Raw(Img(acc, Zone(32, 16, 36, 16), "mq-acc")) }
+        @if (acc != null)
+        {
+            var kind = ((acc.SubType ?? "") + " " + acc.Name).ToLowerInvariant();
+            // Where an accessory sits on the body: hats on the head, bags at the hip, belts at the waist, scarves at the neck.
+            var accZone = kind.Contains("boné") || kind.Contains("chapéu") || kind.Contains("gorro") || kind.Contains("tiara") ? Zone(30, 0, 40, 11)
+                : kind.Contains("bolsa") || kind.Contains("mochila") ? Zone(66, 40, 28, 18)
+                : kind.Contains("cinto") ? Zone(28, 44, 44, 6)
+                : kind.Contains("relógio") || kind.Contains("pulseira") ? Zone(70, 42, 12, 6)
+                : Zone(32, 16, 36, 16);
+            @Html.Raw(Img(acc, accZone, "mq-acc"))
+        }
         @if (shoes != null) { @Html.Raw(Img(shoes, Zone(28, 88, 44, 12), "mq-shoes")) }
     </div>
 </div>

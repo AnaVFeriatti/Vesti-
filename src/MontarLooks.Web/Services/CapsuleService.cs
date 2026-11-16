@@ -154,7 +154,10 @@ public class CapsuleService(AppDbContext db)
     /// How many NEW good looks <paramref name="piece"/> would create, which current pieces it pairs with
     /// most, and its best look. Only enumerates the combinations that contain the new piece.
     /// </summary>
-    public static PieceImpact Impact(IReadOnlyList<ClothingItem> wardrobe, ClothingItem piece, bool withDetails = true)
+    /// <param name="allowBest">Optional rule for the preview look (e.g. the owner's dress-code rules);
+    /// looks it rejects still count, they just are never shown as the best look.</param>
+    public static PieceImpact Impact(IReadOnlyList<ClothingItem> wardrobe, ClothingItem piece, bool withDetails = true,
+        Func<IReadOnlyList<ClothingItem>, bool>? allowBest = null)
     {
         var current = Slots.From(wardrobe);
         var partners = new Dictionary<int, int>();
@@ -165,6 +168,7 @@ public class CapsuleService(AppDbContext db)
         {
             if (!withDetails) return;
             foreach (var i in look) if (!ReferenceEquals(i, piece)) partners[i.Id] = partners.GetValueOrDefault(i.Id) + 1;
+            if (allowBest != null && !allowBest(look)) return;
             // Best look for the preview: strong harmony, fewer layers unless the piece is a layer.
             var score = OutfitGenerator.ColorHarmony(look).score - (look.Length > 3 && piece.Category != Category.Outerwear ? 0.3 : 0)
                         - (look.Max(i => i.Formality) - look.Min(i => i.Formality)) * 0.2;

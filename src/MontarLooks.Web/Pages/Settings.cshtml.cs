@@ -99,10 +99,14 @@ public class SettingsModel(SettingsService settings, WeatherService weather, Dem
     /// <summary>Re-runs crop / background cleanup on every photo, from the kept originals.</summary>
     public async Task<IActionResult> OnPostReprocessPhotosAsync(CancellationToken ct)
     {
-        var items = db.ClothingItems.Where(i => i.PhotoFileName != null).ToList();
+        // Pieces set to the untouched original by hand keep it.
+        var items = db.ClothingItems.Where(i => i.PhotoFileName != null).ToList()
+            .Where(i => !PhotoStorage.IsUntouchedOriginal(i.PhotoFileName)).ToList();
         foreach (var i in items)
+        {
             i.PhotoFileName = await photos.ReprocessAsync(i.PhotoFileName, i.Category, ct);
-        await db.SaveChangesAsync(ct);
+            await db.SaveChangesAsync(ct); // save as we go: a long run can be interrupted
+        }
         TempData["Message"] = $"{items.Count} foto(s) retocadas.";
         return RedirectToPage("/Wardrobe/Index");
     }

@@ -15,11 +15,11 @@
 
 <div class="d-flex flex-wrap justify-content-between align-items-end gap-3 mb-3">
     <div>
-        <h1 class="h3 mb-1 planner-title">Planejador da semana</h1>
-        <div class="text-muted small">
-            @first.ToString("dd/MM") a @last.ToString("dd/MM") · 📍 @Model.City.Name ·
-            <a asp-page="/Settings" class="link-secondary">trocar cidade</a>
-        </div>
+        <h1 class="h3 mb-1">Planejador da semana</h1>
+        <p class="text-muted mb-0">
+            Um look por dia, de @first.ToString("dd/MM") a @last.ToString("dd/MM"), com a previsão de @Model.City.Name
+            (<a asp-page="/Settings" class="link-secondary">trocar cidade</a>).
+        </p>
     </div>
     <div class="d-flex flex-wrap gap-2" role="group" aria-label="Qual semana">
         <a class="btn btn-sm btn-outline-secondary @(!Model.Next ? "active" : "")" asp-page="/Planner" asp-route-weekend="@Model.Weekend" asp-route-next="false">Esta semana</a>
@@ -120,11 +120,16 @@
                                    title="@(Model.Repeated.Contains(it.Id) ? "Repete na semana" : it.Name)">
                                     <partial name="_ItemThumb" model="it" />
                                     <div class="mt-1">@it.Name</div>
+                                    @if (Model.Dirty.Contains(it.Id)) { <span class="badge rounded-pill planner-dirty">no cesto</span> }
                                 </a>
                             }
                         </div>
                     </div>
                     @if (p.Title != null) { <div class="look-title small mb-1">@p.Title</div> }
+                    @if (d.Items.Any(it => Model.Dirty.Contains(it.Id)))
+                    {
+                        <div class="small text-muted mb-1">Tem peça no cesto: lave antes ou <a asp-page="/Laundry">confira a lavanderia</a>.</div>
+                    }
                     <div class="small text-muted mb-2">Montado para @d.DressingC.ToString("0.#")°C@(d.Rainy ? ", com chuva" : "").</div>
                 }
                 else

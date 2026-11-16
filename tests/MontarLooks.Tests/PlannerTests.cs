@@ -128,6 +128,24 @@ public class PlannerTests
         Assert.InRange(t, 18, 23);
     }
 
+    [Fact]
+    public void Day_names_are_capitalized_only_at_the_start()
+    {
+        Assert.Equal("Segunda-feira", MontarLooks.Web.Pages.PlannerModel.DayName(new DateOnly(2026, 11, 16)));
+        Assert.Equal("Sábado", MontarLooks.Web.Pages.PlannerModel.DayName(new DateOnly(2026, 11, 21)));
+    }
+
+    [Fact]
+    public void Week_plan_respects_dress_code_rules()
+    {
+        var wardrobe = Wardrobe();
+        wardrobe.Add(Item("Saia lápis", Category.Bottom, "preto", Style.SmartCasual, 2, 3, "saia lápis"));
+        wardrobe.Add(Item("Sandália", Category.Shoes, "bege", Style.SmartCasual, 1, 3, "sandália"));
+        var looks = new PlannerService(new OutfitGenerator())
+            .Plan(wardrobe, new Dictionary<int, DateOnly>(), Week(), new StylePreferences());
+        Assert.All(looks, l => Assert.DoesNotContain(l.Items, i => i.Name is "Saia lápis" or "Sandália"));
+    }
+
     // ---- Travel ----
 
     [Fact]
@@ -150,6 +168,16 @@ public class PlannerTests
         Assert.True(capsule.PossibleLooks >= tops * bottoms, $"only {capsule.PossibleLooks} looks");
         Assert.Equal(5, capsule.Days.Count);
         Assert.All(capsule.Days, d => Assert.NotEmpty(d.Looks));
+    }
+
+    [Fact]
+    public void Cold_mornings_put_a_jacket_in_the_bag()
+    {
+        var start = new DateOnly(2026, 12, 1);
+        // Warm afternoons (dressing temperature 24°C) but 9°C at dawn.
+        var days = Enumerable.Range(0, 4).Select(i => new TripDay(start.AddDays(i), 24, false, Occasion.Casual, MinC: 9, MaxC: 27)).ToList();
+        var capsule = new TravelService(new OutfitGenerator()).Build(Wardrobe(), days, new StylePreferences());
+        Assert.Contains(capsule.Items, i => i.Category == Category.Outerwear);
     }
 
     [Fact]

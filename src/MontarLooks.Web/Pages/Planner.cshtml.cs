@@ -39,6 +39,8 @@ public class PlannerModel(
     public bool HasForecast { get; private set; }
     public HashSet<int> Repeated { get; private set; } = [];
     public int CleanCount { get; private set; }
+    /// <summary>Pieces in the laundry basket (a locked day may still show one of them).</summary>
+    public HashSet<int> Dirty { get; private set; } = [];
     public DateOnly Today { get; } = LocalClock.Today;
 
     private IReadOnlyList<DateOnly> Dates => PlannerService.WeekDates(Today, Weekend, Next);
@@ -116,8 +118,8 @@ public class PlannerModel(
     private async Task<(List<ClothingItem> all, List<ClothingItem> clean)> ItemsAsync(CancellationToken ct)
     {
         var all = await db.ClothingItems.AsNoTracking().Where(i => i.IsActive && !i.NeedsReview).ToListAsync(ct);
-        var dirty = await store.DirtyAsync();
-        return (all, all.Where(i => !dirty.Contains(i.Id)).ToList());
+        Dirty = await store.DirtyAsync();
+        return (all, all.Where(i => !Dirty.Contains(i.Id)).ToList());
     }
 
     private async Task<Dictionary<DateOnly, DailyForecast>> ForecastAsync(CancellationToken ct)
@@ -141,12 +143,15 @@ public class PlannerModel(
         var inputs = Dates.Select(date =>
         {
             var d = plan.GetOrAdd(date);
-            var (temp, rain) = DressFor(forecast.GetValueOrDefault(date));
-            return new PlanDayInput(date, PlannerService.EffectiveOccasion(d), temp, rain, d.Locked, d.ItemIds, d.Seed);
+            var f = forecast.GetValueOrDefault(date);
+            var (temp, rain) = DressFor(f);
+            return new PlanDayInput(date, PlannerService.EffectiveOccasion(d), temp, rain, d.Locked, d.ItemIds, d.Seed,
+                f?.FeelsMinC, f?.FeelsMaxC);
         }).ToList();
         var current = Dates.ToDictionary(d => d, d => (IReadOnlyList<int>)plan.GetOrAdd(d).ItemIds);
 
-        var looks = planner.Plan(clean, lastWorn, inputs, prefs, onlyDate, current);
+        var looks = planner.Plan(clean, lastWorn, inputs, prefs, onlyDate, current,
+            await store.FeedbackAsync(), await store.PaletteAsync());
         foreach (var l in looks)
         {
             var d = plan.GetOrAdd(l.Date);
@@ -177,6 +182,10 @@ public class PlannerModel(
         Repeated = PlannerService.RepeatedMainPieces(Days.Select(d => new PlannedLook(d.Plan.Date, d.Items, null)));
     }
 
-    public static string DayName(DateOnly d) =>
-        System.Globalization.CultureInfo.GetCultureInfo("pt-BR").DateTimeFormat.GetDayName(d.DayOfWeek);
+    /// <summary>"Segunda-feira", "Sábado"... (only the first letter is capitalized, as in Portuguese).</summary>
+    public static string DayName(DateOnly d)
+    {
+        var name = System.Globalization.CultureInfo.GetCultureInfo("pt-BR").DateTimeFormat.GetDayName(d.DayOfWeek);
+        return name.Length == 0 ? name : char.ToUpperInvariant(name[0]) + name[1..];
+    }
 }

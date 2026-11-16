@@ -2,19 +2,25 @@
 @model LaundryModel
 @{ ViewData["Title"] = "Lavanderia"; }
 
-<div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
-    <h1 class="h3 mb-0">Lavanderia</h1>
+<div class="d-flex flex-wrap justify-content-between align-items-end gap-3 mb-3">
+    <div>
+        <h1 class="h3 mb-1">Lavanderia</h1>
+        <p class="text-muted mb-0">Peça no cesto não aparece nas sugestões até você marcar que lavou. Toque numa peça para mandar para o cesto ou tirar de lá.</p>
+    </div>
     @if (Model.Dirty.Count > 0)
     {
         <form method="post" asp-page-handler="WashAll" data-celebrate><button class="btn btn-accent">🫧 Lavei tudo</button></form>
     }
 </div>
-<p class="text-muted">Peça no cesto não aparece nas sugestões até você marcar que lavou. Toque numa peça para mandar para o cesto ou tirar de lá.</p>
 
 <h2 class="h5 mt-4">🧺 No cesto (@Model.Dirty.Count)</h2>
 @if (Model.Dirty.Count == 0)
 {
     <p class="text-muted small">Cesto vazio. Tudo pronto para usar!</p>
+}
+@if (Model.Dirty.Count + Model.Clean.Count == 0)
+{
+    <p class="text-muted">Nenhuma peça no guarda-roupa ainda. <a asp-page="/Wardrobe/Edit">Cadastre a primeira</a> ou carregue o exemplo em <a asp-page="/Settings">Configurações</a>.</p>
 }
 <div class="wardrobe-grid mb-4">
     @foreach (var i in Model.Dirty)
@@ -30,7 +36,7 @@
 </div>
 
 <h2 class="h5">👕 Limpas (@Model.Clean.Count)</h2>
-<input class="form-control mb-3" placeholder="Buscar peça" data-instant-filter autocomplete="off" />
+<input type="search" class="form-control mb-3" placeholder="Buscar peça" aria-label="Buscar peça limpa" data-instant-filter autocomplete="off" />
 <div class="wardrobe-grid">
     @foreach (var i in Model.Clean)
     {

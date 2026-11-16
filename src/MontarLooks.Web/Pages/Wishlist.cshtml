@@ -101,7 +101,7 @@
         }
         else
         {
-            <p class="small text-muted">@Model.Wishes.Count desejo(s)@(total > 0 ? $" · total de {total:C}" : "")</p>
+            <p class="small text-muted">@(Model.Wishes.Count == 1 ? "1 desejo" : $"{Model.Wishes.Count} desejos")@(total > 0 ? $" · total de {total:C}" : "")</p>
         }
         <div class="d-flex flex-column gap-3">
             @foreach (var e in Model.Wishes)
@@ -126,6 +126,10 @@
                                     <span class="wish-score-lbl">@(e.Impact.NewLooks == 1 ? "look" : "looks")</span>
                                 </div>
                             </div>
+                            @if (e.BlockedFor is { Count: > 0 } blocked)
+                            {
+                                <p class="small text-muted mt-2 mb-1">Pelas suas regras de ocasião, não entra em: @string.Join(", ", blocked.Select(o => o.DisplayName().ToLowerInvariant())).</p>
+                            }
                             @if (!string.IsNullOrWhiteSpace(w.Note)) { <p class="small mt-2 mb-1">📝 @w.Note</p> }
                             @if (WishlistModel.IsHttp(w.Link)) { <a href="@w.Link" target="_blank" rel="noopener noreferrer nofollow" class="small">🔗 ver na loja</a> }
 
@@ -160,7 +164,7 @@
                         <div class="col-sm-4">
                             @if (e.Impact.BestLook is { } look)
                             {
-                                <div class="small text-muted text-center mb-1">Melhor look com ela</div>
+                                <div class="small text-muted text-center mb-1">Melhor look com ela (@e.BestFor.DisplayName().ToLowerInvariant())</div>
                                 <partial name="_Mannequin" model="new MannequinView(look, Model.Prefs, Compact: true)" />
                             }
                         </div>

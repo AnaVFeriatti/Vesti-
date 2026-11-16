@@ -3,10 +3,21 @@
 @using System.Globalization
 @{ ViewData["Title"] = "Configurações"; }
 
-<h1 class="h3 mb-4">Configurações</h1>
+<h1 class="h3 mb-3">Configurações</h1>
 
-<form method="post" asp-page-handler="Avatar" enctype="multipart/form-data" class="card p-4 mb-4">
-    <h2 class="h5">Meu provador</h2>
+<div class="settings-layout">
+<nav class="section-nav" data-section-nav aria-label="Seções das configurações">
+    <a href="#provador"><partial name="_Icon" model="@("user")" /> Provador</a>
+    <a href="#estilo"><partial name="_Icon" model="@("hanger")" /> Meu jeito de vestir</a>
+    <a href="#cidade"><partial name="_Icon" model="@("pin")" /> Cidade</a>
+    <a href="#fotos"><partial name="_Icon" model="@("camera")" /> Fotos</a>
+    <a href="#exemplo"><partial name="_Icon" model="@("database")" /> Dados de exemplo</a>
+</nav>
+
+<div class="settings-sections">
+<section id="provador" class="settings-section" aria-labelledby="h-provador">
+<form method="post" asp-page-handler="Avatar" enctype="multipart/form-data" class="card p-4">
+    <div class="section-head"><span class="section-ico"><partial name="_Icon" model="@("user")" /></span><h2 class="h5" id="h-provador">Meu provador</h2></div>
     <div class="row g-4 align-items-center">
         <div class="col-md-3 text-center">
             <partial name="_Mannequin" model="@(new MannequinView(Array.Empty<ClothingItem>(), Model.Prefs))" />
@@ -54,13 +65,15 @@
                     </div>
                 }
             </div>
-            <button class="btn btn-accent mt-3">Salvar provador</button>
+            <button class="btn btn-accent mt-3"><partial name="_Icon" model="@("check")" /> Salvar provador</button>
         </div>
     </div>
 </form>
+</section>
 
-<form method="post" asp-page-handler="Preferences" class="card p-4 mb-4">
-    <h2 class="h5">Meu jeito de vestir</h2>
+<section id="estilo" class="settings-section" aria-labelledby="h-estilo">
+<form method="post" asp-page-handler="Preferences" class="card p-4">
+    <div class="section-head"><span class="section-ico"><partial name="_Icon" model="@("hanger")" /></span><h2 class="h5" id="h-estilo">Meu jeito de vestir</h2></div>
     <div class="row g-3 align-items-center mb-3">
         <div class="col-md-6">
             <label for="coldBelow" class="form-label">Começo a sentir frio abaixo de</label>
@@ -83,9 +96,9 @@
             var id = "occ" + occ;
             <div class="accordion-item">
                 <h4 class="accordion-header">
-                    <button class="accordion-button @(active.Count > 0 ? "" : "collapsed")" type="button" data-bs-toggle="collapse" data-bs-target="#@id">
+                    <button class="accordion-button @(active.Count > 0 ? "" : "collapsed")" type="button" data-bs-toggle="collapse" data-bs-target="#@id" aria-expanded="@(active.Count > 0 ? "true" : "false")" aria-controls="@id">
                         @occ.DisplayName()
-                        @if (active.Count > 0) { <span class="badge rounded-pill text-bg-light ms-2">@active.Count regra(s)</span> }
+                        @if (active.Count > 0) { <span class="badge rounded-pill badge-count ms-2">@active.Count regra(s)</span> }
                     </button>
                 </h4>
                 <div id="@id" class="accordion-collapse collapse @(active.Count > 0 ? "show" : "")">
@@ -103,17 +116,18 @@
             </div>
         }
     </div>
-    <div class="mt-3"><button class="btn btn-accent">Salvar preferências</button></div>
+    <div class="mt-3"><button class="btn btn-accent"><partial name="_Icon" model="@("check")" /> Salvar preferências</button></div>
 </form>
+</section>
 
-<div class="row g-4">
-    <div class="col-lg-6">
+<section id="cidade" class="settings-section" aria-labelledby="h-cidade">
         <div class="card p-4">
-            <h2 class="h5">Cidade</h2>
+            <div class="section-head"><span class="section-ico"><partial name="_Icon" model="@("pin")" /></span><h2 class="h5" id="h-cidade">Cidade</h2></div>
             <p class="text-muted mb-3">Atual: <strong>@Model.City.Name</strong></p>
-            <form method="get" class="d-flex gap-2 mb-3">
-                <input name="search" value="@Model.Search" class="form-control" placeholder="Buscar cidade (ex.: Ourinhos, Curitiba)" required />
-                <button class="btn btn-outline-secondary">Buscar</button>
+            <form method="get" action="#cidade" class="d-flex gap-2 mb-3" role="search">
+                <label for="citySearch" class="visually-hidden">Buscar cidade</label>
+                <input id="citySearch" name="search" value="@Model.Search" class="form-control" placeholder="Buscar cidade (ex.: Ourinhos, Curitiba)" required />
+                <button class="btn btn-outline-secondary"><partial name="_Icon" model="@("search")" /> Buscar</button>
             </form>
             @if (Model.Searched && Model.Results.Count == 0)
             {
@@ -131,20 +145,11 @@
                 }
             </div>
         </div>
-    </div>
-    <div class="col-lg-6">
+</section>
+
+<section id="fotos" class="settings-section" aria-labelledby="h-fotos">
         <div class="card p-4">
-            <h2 class="h5">Dados de exemplo</h2>
-            <p class="text-muted">Carrega 27 peças fictícias e cerca de 45 dias de histórico, para testar os looks e o dashboard antes de cadastrar as suas roupas.</p>
-            <div class="d-flex gap-2">
-                <form method="post" asp-page-handler="LoadDemo"><button class="btn btn-accent">Carregar exemplo</button></form>
-                <form method="post" asp-page-handler="RemoveDemo"><button class="btn btn-outline-danger">Remover exemplo</button></form>
-            </div>
-        </div>
-    </div>
-    <div class="col-lg-6">
-        <div class="card p-4">
-            <h2 class="h5">Retocar fotos</h2>
+            <div class="section-head"><span class="section-ico"><partial name="_Icon" model="@("camera")" /></span><h2 class="h5" id="h-fotos">Retocar fotos</h2></div>
             <p class="text-muted">
                 Toda foto nova é endireitada, recortada em volta da peça e centralizada num quadrado de fundo clarinho. O original fica guardado.
                 @if (Model.AiBackgroundRemoval)
@@ -157,8 +162,20 @@
                 }
             </p>
             <form method="post" asp-page-handler="ReprocessPhotos" onsubmit="this.querySelector('button').disabled=true;this.querySelector('button').textContent='Retocando… pode levar alguns minutos'">
-                <button class="btn btn-accent">Retocar todas as fotos de novo</button>
+                <button class="btn btn-accent"><partial name="_Icon" model="@("wand")" /> Retocar todas as fotos de novo</button>
             </form>
         </div>
-    </div>
+</section>
+
+<section id="exemplo" class="settings-section" aria-labelledby="h-exemplo">
+        <div class="card p-4">
+            <div class="section-head"><span class="section-ico"><partial name="_Icon" model="@("database")" /></span><h2 class="h5" id="h-exemplo">Dados de exemplo</h2></div>
+            <p class="text-muted">Carrega 27 peças fictícias e cerca de 45 dias de histórico, para testar os looks e o dashboard antes de cadastrar as suas roupas.</p>
+            <div class="d-flex flex-wrap gap-2">
+                <form method="post" asp-page-handler="LoadDemo"><button class="btn btn-accent"><partial name="_Icon" model="@("download")" /> Carregar exemplo</button></form>
+                <form method="post" asp-page-handler="RemoveDemo"><button class="btn btn-outline-danger"><partial name="_Icon" model="@("trash")" /> Remover exemplo</button></form>
+            </div>
+        </div>
+</section>
+</div>
 </div>

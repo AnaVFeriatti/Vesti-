@@ -9,8 +9,8 @@
     }
     else
     {
-        <div class="item-swatch" style="background:@color.Hex">
-            <span>@(Model.SubType ?? Model.Category.DisplayName())</span>
+        <div class="item-swatch" style="background:@color.Hex" role="img" aria-label="@Model.Name (sem foto)">
+            <span aria-hidden="true">@(Model.SubType ?? Model.Category.DisplayName())</span>
         </div>
     }
 </div>

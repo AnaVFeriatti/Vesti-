@@ -31,16 +31,24 @@ public class PhotoProcessor(IHttpClientFactory http, IConfiguration config, ILog
     public Task<byte[]> ProcessAsync(byte[] original, CancellationToken ct = default) => ProcessAsync(original, null, ct);
 
     /// <param name="category">Optional hint: clothes are stood upright and hangers removed; shoes and accessories are only cut out.</param>
-    public async Task<byte[]> ProcessAsync(byte[] original, Category? category, CancellationToken ct = default)
+    public Task<byte[]> ProcessAsync(byte[] original, Category? category, CancellationToken ct = default) =>
+        ProcessAsync(original, category, 0, autoRotate: true, ct);
+
+    /// <param name="quarterTurns">Turns the (auto-oriented) photo by this many quarter turns clockwise before processing
+    /// (negative = counter-clockwise). The source bytes are never changed.</param>
+    /// <param name="autoRotate">When false the piece keeps the orientation it has in the photo (the person chose it).</param>
+    public async Task<byte[]> ProcessAsync(byte[] original, Category? category, int quarterTurns, bool autoRotate, CancellationToken ct = default)
     {
         using var img = Image.Load<Rgba32>(original);
         img.Mutate(x => x.AutoOrient());
+        var turn = QuarterTurnMode(quarterTurns);
+        if (turn != RotateMode.None) img.Mutate(x => x.Rotate(turn));
         // Work at a sane size: phone photos are big and the catalog does not need it.
         if (Math.Max(img.Width, img.Height) > 1600)
             img.Mutate(x => x.Resize(new ResizeOptions { Mode = ResizeMode.Max, Size = new Size(1600, 1600) }));
 
         using var cutout = await TryRemoveBackgroundAsync(img, ct);
-        using var result = Compose(img, cutout, category, out var notes);
+        using var result = Compose(img, cutout, category, autoRotate, out var notes);
         log.LogDebug("Photo processed: {Notes}", notes);
         using var ms = new MemoryStream();
         await result.SaveAsJpegAsync(ms, new JpegEncoder { Quality = 88 }, ct);
@@ -79,7 +87,11 @@ public class PhotoProcessor(IHttpClientFactory http, IConfiguration config, ILog
     /// <paramref name="cutout"/> the background-removal result (only its alpha is used) or null.
     /// Returns a new <see cref="Size"/>x<see cref="Size"/> image.
     /// </summary>
-    public static Image<Rgba32> Compose(Image<Rgba32> photo, Image<Rgba32>? cutout, Category? category, out string notes)
+    public static Image<Rgba32> Compose(Image<Rgba32> photo, Image<Rgba32>? cutout, Category? category, out string notes) =>
+        Compose(photo, cutout, category, autoRotate: true, out notes);
+
+    /// <param name="autoRotate">False keeps the piece as it lies in <paramref name="photo"/> (no "stand it upright").</param>
+    public static Image<Rgba32> Compose(Image<Rgba32> photo, Image<Rgba32>? cutout, Category? category, bool autoRotate, out string notes)
     {
         var log = new List<string>();
         byte[]? alpha = cutout == null ? null : ExtractAlpha(cutout, photo.Width, photo.Height);
@@ -158,6 +170,12 @@ public class PhotoProcessor(IHttpClientFactory http, IConfiguration config, ILog
             log.Add("fallback crop");
         }
 
+        if (!autoRotate && rotation != RotateMode.None)
+        {
+            log.Add("auto rotation " + rotation + " skipped");
+            rotation = RotateMode.None;
+        }
+
         using (piece)
         {
             if (rotation != RotateMode.None) piece.Mutate(x => x.Rotate(rotation));
@@ -203,6 +221,73 @@ public class PhotoProcessor(IHttpClientFactory http, IConfiguration config, ILog
         }
         canvas.Mutate(x => x.DrawImage(piece, pos, 1f));
         return canvas;
+    }
+
+    // ------------------------------------------------------------------ manual photo tools
+
+    /// <summary>Quarter turns clockwise (any integer, negative = counter-clockwise) as an ImageSharp rotation.</summary>
+    public static RotateMode QuarterTurnMode(int quarterTurns) => (((quarterTurns % 4) + 4) % 4) switch
+    {
+        1 => RotateMode.Rotate90,
+        2 => RotateMode.Rotate180,
+        3 => RotateMode.Rotate270,
+        _ => RotateMode.None
+    };
+
+    /// <summary>
+    /// Turns an already processed photo by quarter turns (clockwise when positive), without any reprocessing.
+    /// Transparent areas are flattened on the backdrop. Returns a JPEG.
+    /// </summary>
+    public static byte[] RotateQuarter(byte[] image, int quarterTurns)
+    {
+        using var img = Image.Load<Rgba32>(image);
+        img.Mutate(x => x.AutoOrient());
+        var turn = QuarterTurnMode(quarterTurns);
+        if (turn != RotateMode.None) img.Mutate(x => x.Rotate(turn));
+        using var flat = Flatten(img);
+        return ToJpeg(flat, 92);
+    }
+
+    /// <summary>
+    /// The untouched original as a catalog square: only EXIF orientation is fixed, then it is fitted
+    /// (not cropped) into a <see cref="Size"/>x<see cref="Size"/> square on the soft-pink backdrop. No AI, no retouch.
+    /// </summary>
+    public static byte[] Untouched(byte[] original)
+    {
+        using var img = Image.Load<Rgba32>(original);
+        img.Mutate(x => x.AutoOrient());
+        img.Mutate(x => x.Resize(new ResizeOptions
+        {
+            Mode = ResizeMode.Max, Size = new Size(Size, Size), Sampler = KnownResamplers.Lanczos3
+        }));
+        using var canvas = new Image<Rgba32>(Size, Size, Backdrop);
+        canvas.Mutate(x => x.DrawImage(img, new SixLabors.ImageSharp.Point((Size - img.Width) / 2, (Size - img.Height) / 2), 1f));
+        return ToJpeg(canvas, 90);
+    }
+
+    /// <summary>A small auto-oriented JPEG preview (longest side <paramref name="max"/>), for the before/after view.</summary>
+    public static byte[] Thumbnail(byte[] image, int max = 360)
+    {
+        using var img = Image.Load<Rgba32>(image);
+        img.Mutate(x => x.AutoOrient());
+        if (Math.Max(img.Width, img.Height) > max)
+            img.Mutate(x => x.Resize(new ResizeOptions { Mode = ResizeMode.Max, Size = new Size(max, max) }));
+        using var flat = Flatten(img);
+        return ToJpeg(flat, 82);
+    }
+
+    private static Image<Rgba32> Flatten(Image<Rgba32> img)
+    {
+        var canvas = new Image<Rgba32>(img.Width, img.Height, Backdrop);
+        canvas.Mutate(x => x.DrawImage(img, new SixLabors.ImageSharp.Point(0, 0), 1f));
+        return canvas;
+    }
+
+    private static byte[] ToJpeg(Image<Rgba32> img, int quality)
+    {
+        using var ms = new MemoryStream();
+        img.SaveAsJpeg(ms, new JpegEncoder { Quality = quality });
+        return ms.ToArray();
     }
 
     // ------------------------------------------------------------------ color

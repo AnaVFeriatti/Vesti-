@@ -58,7 +58,10 @@ public class IndexModel(
             {
                 Excluded = dirty,
                 Feedback = feedback,
-                Palette = await store.PaletteAsync()
+                Palette = await store.PaletteAsync(),
+                // The day's range drives the "removable layer" logic; a manual temperature overrides it.
+                MinC = Temp is null ? Weather?.MinC : null,
+                MaxC = Temp is null ? Weather?.MaxC : null
             });
     }
 

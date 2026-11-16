@@ -7,7 +7,7 @@
 .pal-result { border-top: 5px solid var(--pink-petal); }
 .pal-emoji { font-size: 3rem; line-height: 1; }
 .pal-family { font-size: .8rem; font-weight: 700; letter-spacing: .06em; text-transform: uppercase; color: var(--purple); }
-.pal-score summary, .palette-page details > summary { cursor: pointer; font-weight: 700; color: var(--pink-dark); }
+.pal-score summary, .palette-page details > summary { font-weight: 700; } /* cor e cursor vêm de site.css */
 .pal-axis-bar { position: relative; height: 12px; border-radius: 999px;
     background: linear-gradient(90deg, var(--purple-soft), #fff 50%, var(--pink-soft)); box-shadow: inset 0 0 0 1px var(--line); }
 .pal-axis-mark { position: absolute; top: 50%; width: 18px; height: 18px; border-radius: 50%; transform: translate(-50%, -50%);

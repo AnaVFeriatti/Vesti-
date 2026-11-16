@@ -1,6 +1,7 @@
 @page
 @model MontarLooks.Web.Pages.Wardrobe.IndexModel
 @{ ViewData["Title"] = "Guarda-roupa"; }
+<link rel="stylesheet" href="~/css/photo-tools.css" asp-append-version="true" />
 
 <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
     <h1 class="h3 mb-0">Guarda-roupa <span class="text-muted fs-6">(@Model.Items.Count peças)</span></h1>
@@ -58,7 +59,13 @@
     {
         var c = ColorPalette.Get(i.PrimaryColor);
         <a class="wardrobe-card @(i.IsActive ? "" : "opacity-50")" asp-page="Edit" asp-route-id="@i.Id">
-            <partial name="_ItemThumb" model="i" />
+            <div class="pt-photo">
+                <partial name="_ItemThumb" model="i" />
+                @if (PhotoStorage.IsUntouchedOriginal(i.PhotoFileName))
+                {
+                    <span class="pt-badge" title="Foto sem retoque">foto original</span>
+                }
+            </div>
             <div class="mt-2 small fw-semibold text-truncate">@i.Name</div>
             <div class="small text-muted">
                 <span class="color-dot" style="background:@c.Hex"></span> @c.Name · @i.Style.DisplayName()

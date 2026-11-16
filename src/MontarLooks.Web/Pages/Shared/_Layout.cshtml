@@ -12,11 +12,13 @@
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800&family=Quicksand:wght@600;700&display=swap" />
     <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css" />
     <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
+    <script>document.documentElement.classList.add("js");</script>
 </head>
 <body>
-    <nav class="navbar navbar-expand-lg app-nav">
+    <a class="skip-link" href="#conteudo">Pular para o conteúdo</a>
+    <nav class="navbar navbar-expand-lg app-nav" aria-label="Menu principal">
         <div class="container">
-            <a class="navbar-brand fw-bold" asp-page="/Index"><img src="~/img/flower-rose.svg" alt="" class="brand-flower" /> Vestiê</a>
+            <a class="navbar-brand fw-bold" asp-page="/Index" aria-label="Vestiê, página inicial"><img src="~/img/flower-rose.svg" alt="" class="brand-flower" width="30" height="30" /> Vestiê</a>
             <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#nav"
                     aria-controls="nav" aria-expanded="false" aria-label="Abrir menu">
                 <span class="navbar-toggler-icon"></span>
@@ -33,15 +35,15 @@
                         <li class="nav-item"><a class="nav-link @Active(l.Page)" asp-page="@l.Page" aria-current="@(Active(l.Page) != "" ? "page" : null)"><partial name="_Icon" model="l.Icon" /> @l.Label</a></li>
                     }
                     <li class="nav-item dropdown">
-                        <a class="nav-link dropdown-toggle @(toolsActive ? "active" : "")" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false"><partial name="_Icon" model="@("tools")" /> Ferramentas</a>
-                        <div class="dropdown-menu dropdown-menu-lg-end tools-menu">
+                        <a class="nav-link dropdown-toggle @(toolsActive ? "active" : "")" href="#" id="toolsToggle" role="button" data-bs-toggle="dropdown" data-bs-auto-close="outside" aria-expanded="false"><partial name="_Icon" model="@("tools")" /> Ferramentas</a>
+                        <div class="dropdown-menu dropdown-menu-lg-end tools-menu" aria-labelledby="toolsToggle">
                             @foreach (var g in NavMenu.Tools)
                             {
                                 <div class="tools-group">
                                     <div class="dropdown-header">@g.Title</div>
                                     @foreach (var l in g.Links)
                                     {
-                                        <a class="dropdown-item @Active(l.Page)" asp-page="@l.Page">
+                                        <a class="dropdown-item @Active(l.Page)" asp-page="@l.Page" aria-current="@(Active(l.Page) != "" ? "page" : null)">
                                             <span class="tools-ico"><partial name="_Icon" model="l.Icon" /></span>
                                             <span><span class="d-block fw-semibold">@l.Label</span><small class="text-muted">@l.Hint</small></span>
                                         </a>
@@ -52,22 +54,24 @@
                     </li>
                 </ul>
                 <ul class="navbar-nav">
-                    <li class="nav-item"><a class="nav-link @Active("/Settings")" asp-page="/Settings"><partial name="_Icon" model="@("gear")" /> Configurações</a></li>
+                    <li class="nav-item"><a class="nav-link @Active("/Settings")" asp-page="/Settings" aria-current="@(Active("/Settings") != "" ? "page" : null)"><partial name="_Icon" model="@("gear")" /> Configurações</a></li>
                 </ul>
             </div>
         </div>
     </nav>
-    <main class="container app-main pb-5">
+    <main class="container app-main pb-5" id="conteudo" tabindex="-1">
         @if (TempData["Message"] is string msg)
         {
-            <div class="alert alert-success alert-dismissible fade show" role="alert">
-                @msg
-                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Fechar"></button>
+            @* Sem JS: aviso no topo da página. Com JS: vira um toast flutuante que some sozinho. *@
+            <div class="app-toast" role="status" aria-live="polite" data-toast>
+                <span class="app-toast-ico"><partial name="_Icon" model="@("check")" /></span>
+                <span class="app-toast-text">@msg</span>
+                <button type="button" class="app-toast-close" aria-label="Fechar aviso" data-toast-close><partial name="_Icon" model="@("x")" /></button>
             </div>
         }
         @RenderBody()
     </main>
-    <footer class="app-footer">feito com carinho 🌸 Vestiê</footer>
+    <footer class="app-footer">feito com carinho <img src="~/img/flower-pink.svg" alt="" width="16" height="16" class="footer-flower" /> Vestiê</footer>
 
     <script src="~/lib/jquery/dist/jquery.min.js"></script>
     <script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>

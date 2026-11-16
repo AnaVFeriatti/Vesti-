@@ -11,7 +11,67 @@
 <div class="row g-4">
     <div class="col-md-4">
         <div class="card p-3">
-            <partial name="_ItemThumb" model="Model.Item" />
+            @if (!isNew && !string.IsNullOrEmpty(Model.Item.PhotoFileName))
+            {
+                var photoUrl = "/uploads/" + Uri.EscapeDataString(Model.Item.PhotoFileName);
+                <div class="pt-photo">
+                    <div class="item-thumb" title="@Model.Item.Name">
+                        <img src="@photoUrl" alt="@Model.Item.Name" data-pt-current />
+                    </div>
+                    <span class="pt-badge" data-pt-badge hidden="@(!Model.UsesOriginal)">foto original</span>
+                </div>
+
+                @if (Model.HasOriginal)
+                {
+                    <div class="pt-compare" aria-label="Antes e depois">
+                        <figure>
+                            <img src="@Url.Page("Edit", "Original", new { id = Model.Item.Id, v = PhotoStorage.BaseId(Model.Item.PhotoFileName) })" alt="Foto original de @Model.Item.Name" />
+                            <figcaption>Antes</figcaption>
+                        </figure>
+                        <span class="pt-arrow" aria-hidden="true">→</span>
+                        <figure>
+                            <img src="@photoUrl" alt="Foto atual de @Model.Item.Name" data-pt-current />
+                            <figcaption data-pt-after-label>@(Model.UsesOriginal ? "Original" : "Retocada")</figcaption>
+                        </figure>
+                    </div>
+                }
+
+                <form method="post" asp-page-handler="Photo" asp-route-id="@Model.Item.Id" class="pt-tools" data-pt-form>
+                    <input type="hidden" name="category" value="@((int)Model.Item.Category)" data-pt-category />
+                    <div class="pt-label">Ajustar foto</div>
+                    <div class="pt-row">
+                        <button class="btn btn-sm btn-outline-secondary" name="op" value="left" title="Girar a foto atual para a esquerda" data-busy="Girando…">Girar ↺</button>
+                        <button class="btn btn-sm btn-outline-secondary" name="op" value="right" title="Girar a foto atual para a direita" data-busy="Girando…">Girar ↻</button>
+                    </div>
+                    @if (Model.HasOriginal)
+                    {
+                        <div class="pt-row">
+                            <button class="btn btn-sm btn-accent" name="op" value="retouch" title="Tirar o fundo e o cabide de novo a partir da foto original"
+                                    data-busy="Retocando… pode levar alguns segundos"><partial name="_Icon" model="@("sparkle")" /> Retocar de novo</button>
+                            <button class="btn btn-sm btn-outline-secondary" name="op" value="original" title="Usar a foto como foi tirada, sem retoque"
+                                    data-busy="Preparando a original…">Usar foto original</button>
+                        </div>
+                        <div class="pt-row pt-turn">
+                            <label class="visually-hidden" for="pt-turns">Quanto girar a original</label>
+                            <select id="pt-turns" name="turns" class="form-select form-select-sm">
+                                <option value="1">↻ 90°</option>
+                                <option value="2">180°</option>
+                                <option value="3">↺ 90°</option>
+                            </select>
+                            <button class="btn btn-sm btn-outline-secondary" name="op" value="turn-retouch"
+                                    title="Para quando o retoque escolhe o lado de cima errado: gira a original e retoca mantendo essa posição"
+                                    data-busy="Girando e retocando…">Girar original e retocar</button>
+                        </div>
+                    }
+                    <div class="pt-status small text-muted" role="status" aria-live="polite" data-pt-status>
+                        @(Model.HasOriginal ? "Girar é na hora; retocar usa a foto original guardada." : "Esta peça não tem a foto original guardada; dá para girar.")
+                    </div>
+                </form>
+            }
+            else
+            {
+                <partial name="_ItemThumb" model="Model.Item" />
+            }
             @if (!isNew)
             {
                 <div class="small text-muted mt-3">
@@ -169,6 +229,45 @@
     </div>
 </div>
 
+<link rel="stylesheet" href="~/css/photo-tools.css" asp-append-version="true" />
+
 @section Scripts {
     <partial name="_ValidationScriptsPartial" />
+    <script>
+        (() => {
+            const form = document.querySelector('[data-pt-form]');
+            if (!form) return;
+            const status = form.querySelector('[data-pt-status]');
+            const catSelect = document.getElementById('Item_Category');
+            form.addEventListener('submit', async e => {
+                if (!window.fetch || !window.FormData) return; // plain post + redirect still works
+                e.preventDefault();
+                const btn = e.submitter;
+                if (catSelect) form.querySelector('[data-pt-category]').value = catSelect.value;
+                const data = new FormData(form);
+                if (btn && btn.name) data.set(btn.name, btn.value);
+                const buttons = form.querySelectorAll('button, select');
+                buttons.forEach(b => b.disabled = true);
+                form.classList.add('is-busy');
+                status.textContent = (btn && btn.dataset.busy) || 'Um instante…';
+                try {
+                    const res = await fetch(form.action, { method: 'POST', body: data, headers: { 'X-Requested-With': 'fetch' } });
+                    const json = await res.json();
+                    if (json.photo) {
+                        document.querySelectorAll('[data-pt-current]').forEach(img => img.src = json.photo);
+                    }
+                    const badge = document.querySelector('[data-pt-badge]');
+                    if (badge) badge.hidden = !json.untouched;
+                    const after = document.querySelector('[data-pt-after-label]');
+                    if (after) after.textContent = json.untouched ? 'Original' : 'Retocada';
+                    status.textContent = json.message;
+                } catch {
+                    status.textContent = 'Não deu certo agora. Tente de novo.';
+                } finally {
+                    buttons.forEach(b => b.disabled = false);
+                    form.classList.remove('is-busy');
+                }
+            });
+        })();
+    </script>
 }

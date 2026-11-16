@@ -101,6 +101,41 @@ public class InsightsTests
         Assert.Equal(-1000, eval.Impact.BestLook!.First(i => i.Category == Category.Bottom).Id);
     }
 
+    [Fact]
+    public void Wish_best_look_follows_the_dress_code_of_its_occasion()
+    {
+        var w = Wardrobe();
+        w.Add(Item("Calça social", Category.Bottom, "preto", Style.SmartCasual, 2, 3));
+        w.First(i => i.Name == "Saia verde").SubType = "saia"; // dress-code rules look at the type
+        // A smart-casual blouse is bought for work: the preview must not pair it with the skirt.
+        var wish = new WishItem { Name = "Blusa bege", Category = Category.Top, PrimaryColor = "bege", Style = Style.SmartCasual, Formality = 3 };
+        var eval = Assert.Single(WishlistService.Evaluate([wish], w, new StylePreferences()));
+        Assert.Equal(Occasion.Work, eval.BestFor);
+        Assert.NotNull(eval.Impact.BestLook);
+        Assert.DoesNotContain(eval.Impact.BestLook!, i => i.Name == "Saia verde");
+        Assert.Empty(eval.BlockedFor!);
+    }
+
+    [Fact]
+    public void Wish_lists_occasions_whose_rules_forbid_it()
+    {
+        var skirt = new WishItem { Name = "Saia midi", Category = Category.Bottom, SubType = "saia midi", PrimaryColor = "preto", Style = Style.SmartCasual, Formality = 3 };
+        var eval = Assert.Single(WishlistService.Evaluate([skirt], Wardrobe(), new StylePreferences()));
+        Assert.Contains(Occasion.Work, eval.BlockedFor!);
+        Assert.Equal(Occasion.Casual, eval.BestFor); // falls back to an occasion where it is allowed
+    }
+
+    [Theory]
+    [InlineData("189,90", 189.90)]
+    [InlineData("189.90", 189.90)]
+    [InlineData("1.299,00", 1299)]
+    [InlineData("50", 50)]
+    public void Wish_price_is_read_the_way_people_type_it(string raw, double expected)
+    {
+        Assert.True(MontarLooks.Web.Pages.WishlistModel.TryParsePrice(raw, out var price));
+        Assert.Equal((decimal)expected, price);
+    }
+
     // ---------------------------------------------------------------- Desapego
 
     [Fact]

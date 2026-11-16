@@ -1,12 +1,10 @@
 /* Planejador da semana + Mala de viagem */
-.planner-title { font-family: var(--title-font); color: var(--pink-dark); }
-
 .planner-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 1rem; }
 .planner-day { padding: 1.1rem; display: flex; flex-direction: column; }
 .planner-day.is-today { box-shadow: 0 0 0 3px var(--pink-petal); }
 .planner-day.is-past { opacity: .75; }
 .planner-day.is-locked { background: linear-gradient(180deg, var(--purple-soft), #fff 40%); }
-.planner-dayname { font-family: var(--title-font); text-transform: capitalize; color: var(--ink); font-weight: 700; }
+.planner-dayname { font-family: var(--title-font); color: var(--ink); font-weight: 700; }
 .planner-today { background: var(--pink); color: #fff; font-size: .68rem; vertical-align: middle; border-radius: 999px; }
 .planner-weather { line-height: 1.2; min-width: 64px; }
 .planner-wicon { font-size: 1.7rem; line-height: 1; }
@@ -16,6 +14,7 @@
 .planner-items { gap: .4rem; }
 .planner-items .look-item { width: 64px; font-size: .7rem; }
 .planner-repeat .item-thumb { box-shadow: 0 0 0 2px var(--brown); }
+.planner-dirty { background: var(--purple-soft); color: var(--purple-dark); font-size: .62rem; }
 .planner-empty { border: 2px dashed var(--line); border-radius: 14px; padding: 1rem; text-align: center; color: var(--muted); font-size: .9rem; }
 
 /* Mala de viagem */

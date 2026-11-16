@@ -20,10 +20,10 @@
 <link rel="stylesheet" href="~/css/palette.css" asp-append-version="true" />
 
 <div class="palette-page">
-<header class="mb-4">
+<div class="mb-4">
     <h1 class="h3 mb-1">Paleta pessoal</h1>
     <p class="text-muted mb-0">Descubra quais cores iluminam o seu rosto, no sistema de 12 estações. Leva uns 2 minutinhos e tudo acontece aqui no seu computador.</p>
-</header>
+</div>
 
 @if (p != null)
 {
@@ -59,6 +59,7 @@
                         </p>
                     </div>
                     <div class="col-md-7">
+                        <div class="table-responsive">
                         <table class="table table-sm small mb-0">
                             <thead><tr><th>Pergunta</th><th>Resposta</th><th class="text-center" title="Temperatura">🌡️</th><th class="text-center" title="Profundidade">🌗</th><th class="text-center" title="Intensidade">✨</th></tr></thead>
                             <tbody>
@@ -69,6 +70,7 @@
                                 <tr class="fw-bold"><td colspan="2">Total (máximo ±@PaletteService.MaxWarmth / ±@PaletteService.MaxDepth / ±@PaletteService.MaxClarity)</td><td class="text-center">@Pts(s.WarmthRaw)</td><td class="text-center">@Pts(s.DepthRaw)</td><td class="text-center">@Pts(s.ClarityRaw)</td></tr>
                             </tbody>
                         </table>
+                        </div>
                     </div>
                 </div>
             </details>

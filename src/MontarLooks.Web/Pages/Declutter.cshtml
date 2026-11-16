@@ -44,7 +44,7 @@ else
                         <h2 class="h6 mb-1 text-truncate"><a asp-page="/Wardrobe/Edit" asp-route-id="@c.Item.Id">@c.Item.Name</a></h2>
                         <div class="small text-muted mb-1"><span class="color-dot" style="background:@color.Hex"></span> @color.Name · @c.Item.Category.DisplayName()</div>
                         <span class="badge rounded-pill @(c.Reason == DeclutterReason.NeverWorn ? "badge-never" : "badge-idle")">
-                            @(c.Reason == DeclutterReason.NeverWorn ? "nunca usada" : $"{c.Wears} uso(s)")
+                            @(c.Reason == DeclutterReason.NeverWorn ? "nunca usada" : c.Wears == 1 ? "1 uso" : $"{c.Wears} usos")
                         </span>
                     </div>
                 </div>

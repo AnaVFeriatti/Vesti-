@@ -21,7 +21,11 @@
 
 @if (s.ActiveItems == 0)
 {
-    <div class="card p-4"><p class="mb-0">Cadastre peças (ou carregue o exemplo em <a asp-page="/Settings">Configurações</a>) para ver os números.</p></div>
+    <div class="card empty-state">
+        <div class="empty-ico"><partial name="_Icon" model="@("chart")" /></div>
+        <p class="mb-3">Cadastre peças (ou carregue o exemplo em <a asp-page="/Settings" asp-fragment="exemplo">Configurações</a>) para ver os números.</p>
+        <div><a asp-page="/Wardrobe/Edit" class="btn btn-accent"><partial name="_Icon" model="@("hanger")" /> Cadastrar peça</a></div>
+    </div>
     return;
 }
 
@@ -36,13 +40,13 @@
     <div class="col-lg-8">
         <div class="card p-3 h-100">
             <h2 class="h6">Looks registrados por semana</h2>
-            <div class="chart-box"><canvas id="perWeek" aria-label="Looks por semana"></canvas></div>
+            <div class="chart-box"><canvas id="perWeek" role="img" aria-label="Gráfico de barras: looks registrados por semana"></canvas></div>
         </div>
     </div>
     <div class="col-lg-4">
         <div class="card p-3 h-100">
             <h2 class="h6">Temperatura média dos looks por semana (°C)</h2>
-            <div class="chart-box"><canvas id="tempPerWeek" aria-label="Temperatura média por semana"></canvas></div>
+            <div class="chart-box"><canvas id="tempPerWeek" role="img" aria-label="Gráfico de linha: temperatura média dos looks por semana"></canvas></div>
         </div>
     </div>
 </div>
@@ -51,34 +55,34 @@
     <div class="col-md-6">
         <div class="card p-3 h-100">
             <h2 class="h6">Cores no guarda-roupa (peças)</h2>
-            <div class="chart-box"><canvas id="itemsByColor" aria-label="Peças por cor"></canvas></div>
+            <div class="chart-box"><canvas id="itemsByColor" role="img" aria-label="Gráfico de barras: peças por cor"></canvas></div>
         </div>
     </div>
     <div class="col-md-6">
         <div class="card p-3 h-100">
             <h2 class="h6">Cores que você mais veste (usos)</h2>
-            <div class="chart-box"><canvas id="wearsByColor" aria-label="Usos por cor"></canvas></div>
+            <div class="chart-box"><canvas id="wearsByColor" role="img" aria-label="Gráfico de barras: usos por cor"></canvas></div>
         </div>
     </div>
 </div>
 
 <div class="row g-3 mb-4">
     <div class="col-md-4">
-        <div class="card p-3 h-100"><h2 class="h6">Peças por categoria</h2><div class="chart-box"><canvas id="byCategory"></canvas></div></div>
+        <div class="card p-3 h-100"><h2 class="h6">Peças por categoria</h2><div class="chart-box"><canvas id="byCategory" role="img" aria-label="Gráfico de barras: peças por categoria"></canvas></div></div>
     </div>
     <div class="col-md-4">
-        <div class="card p-3 h-100"><h2 class="h6">Looks por ocasião</h2><div class="chart-box"><canvas id="byOccasion"></canvas></div></div>
+        <div class="card p-3 h-100"><h2 class="h6">Looks por ocasião</h2><div class="chart-box"><canvas id="byOccasion" role="img" aria-label="Gráfico de barras: looks por ocasião"></canvas></div></div>
     </div>
     <div class="col-md-4">
-        <div class="card p-3 h-100"><h2 class="h6">Tipos de combinação de cor</h2><div class="chart-box"><canvas id="harmony"></canvas></div></div>
+        <div class="card p-3 h-100"><h2 class="h6">Tipos de combinação de cor</h2><div class="chart-box"><canvas id="harmony" role="img" aria-label="Gráfico de barras: tipos de combinação de cor"></canvas></div></div>
     </div>
 </div>
 
 <div class="row g-3">
     <div class="col-md-6">
         <div class="card p-3 h-100">
-            <h2 class="h6">🔥 Mais usadas</h2>
-            <table class="table table-sm mb-0">
+            <h2 class="h6 h-ico"><partial name="_Icon" model="@("flame")" /> Mais usadas</h2>
+            <div class="table-responsive"><table class="table table-sm mb-0">
                 <thead><tr><th>Peça</th><th class="text-end">Usos</th><th class="text-end">Última vez</th></tr></thead>
                 <tbody>
                 @foreach (var u in s.MostWorn)
@@ -86,19 +90,19 @@
                     <tr><td><a asp-page="/Wardrobe/Edit" asp-route-id="@u.Item.Id">@u.Item.Name</a></td><td class="text-end">@u.Wears</td><td class="text-end">@u.LastWorn?.ToString("dd/MM")</td></tr>
                 }
                 </tbody>
-            </table>
+            </table></div>
         </div>
     </div>
     <div class="col-md-6">
         <div class="card p-3 h-100">
-            <h2 class="h6">🧊 Esquecidas (30+ dias sem uso)</h2>
+            <h2 class="h6 h-ico"><partial name="_Icon" model="@("snow")" /> Esquecidas (30+ dias sem uso)</h2>
             @if (s.Forgotten.Count == 0)
             {
                 <p class="text-muted small mb-0">Nenhuma. Você está usando bem o guarda-roupa!</p>
             }
             else
             {
-                <table class="table table-sm mb-0">
+                <div class="table-responsive"><table class="table table-sm mb-0">
                     <thead><tr><th>Peça</th><th class="text-end">Usos</th><th class="text-end">Última vez</th></tr></thead>
                     <tbody>
                     @foreach (var u in s.Forgotten)
@@ -106,15 +110,15 @@
                         <tr><td><a asp-page="/Wardrobe/Edit" asp-route-id="@u.Item.Id">@u.Item.Name</a></td><td class="text-end">@u.Wears</td><td class="text-end">@(u.LastWorn?.ToString("dd/MM") ?? "nunca")</td></tr>
                     }
                     </tbody>
-                </table>
+                </table></div>
                 <p class="small text-muted mt-2 mb-0">O gerador dá preferência a essas peças. Se continuarem paradas, talvez seja hora de doar.</p>
             }
         </div>
     </div>
     <div class="col-md-6">
         <div class="card p-3 h-100">
-            <h2 class="h6">Menos usadas</h2>
-            <table class="table table-sm mb-0">
+            <h2 class="h6 h-ico"><partial name="_Icon" model="@("clock")" /> Menos usadas</h2>
+            <div class="table-responsive"><table class="table table-sm mb-0">
                 <thead><tr><th>Peça</th><th class="text-end">Usos</th></tr></thead>
                 <tbody>
                 @foreach (var u in s.LeastWorn)
@@ -122,19 +126,19 @@
                     <tr><td><a asp-page="/Wardrobe/Edit" asp-route-id="@u.Item.Id">@u.Item.Name</a></td><td class="text-end">@u.Wears</td></tr>
                 }
                 </tbody>
-            </table>
+            </table></div>
         </div>
     </div>
     <div class="col-md-6">
         <div class="card p-3 h-100">
-            <h2 class="h6">💸 Maior custo por uso</h2>
+            <h2 class="h6 h-ico"><partial name="_Icon" model="@("coin")" /> Maior custo por uso</h2>
             @if (s.WorstCostPerWear.Count == 0)
             {
                 <p class="text-muted small mb-0">Informe o preço das peças para ver o custo por uso.</p>
             }
             else
             {
-                <table class="table table-sm mb-0">
+                <div class="table-responsive"><table class="table table-sm mb-0">
                     <thead><tr><th>Peça</th><th class="text-end">Preço</th><th class="text-end">Usos</th><th class="text-end">R$/uso</th></tr></thead>
                     <tbody>
                     @foreach (var u in s.WorstCostPerWear)
@@ -142,7 +146,7 @@
                         <tr><td><a asp-page="/Wardrobe/Edit" asp-route-id="@u.Item.Id">@u.Item.Name</a></td><td class="text-end">@u.Item.Price?.ToString("C")</td><td class="text-end">@u.Wears</td><td class="text-end">@u.CostPerWear?.ToString("C")</td></tr>
                     }
                     </tbody>
-                </table>
+                </table></div>
             }
         </div>
     </div>

@@ -171,4 +171,14 @@ public class OutfitGeneratorTests
         Assert.DoesNotContain(looks, l => main.All(id => l.Items.Any(i => i.Id == id)));
         Assert.DoesNotContain(looks, l => l.Items.Any(i => i.Id == dirtyShoe));
     }
+
+    [Fact]
+    public void Dress_code_also_reads_the_name_when_the_type_is_empty()
+    {
+        var skirt = new ClothingItem { Name = "Saia midi preta", Category = Category.Bottom };
+        var pants = new ClothingItem { Name = "Calça preta", Category = Category.Bottom };
+        var rules = new HashSet<DressRule> { DressRule.NoSkirts, DressRule.NoStraps };
+        Assert.Equal(DressRule.NoSkirts, StylePreferences.Breaks(skirt, rules));
+        Assert.Null(StylePreferences.Breaks(pants, rules));
+    }
 }

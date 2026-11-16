@@ -1,3 +1,4 @@
+using Microsoft.EntityFrameworkCore;
 using MontarLooks.Web.Data;
 using MontarLooks.Web.Models;
 using SixLabors.ImageSharp;
@@ -301,7 +302,7 @@ public class PaletteService(JsonStore store, AppDbContext db)
 
     public PaletteWardrobe Wardrobe(PersonalPalette palette)
     {
-        var items = db.ClothingItems.Where(i => i.IsActive && !i.NeedsReview).OrderBy(i => i.Category).ThenBy(i => i.Name).ToList();
+        var items = db.ClothingItems.AsNoTracking().Where(i => i.IsActive && !i.NeedsReview).OrderBy(i => i.Category).ThenBy(i => i.Name).ToList();
         return Split(items, palette);
     }
 

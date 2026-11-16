@@ -56,8 +56,10 @@ public class StylePreferences
 
     private static readonly string[] OpenShoeWords = ["sandália", "sandalia", "rasteira", "chinelo", "slide", "tamanco", "mule", "peep", "papete", "birken"];
 
+    /// <summary>Matches the piece's type, or its name when the type was left empty / generic.</summary>
     private static bool Sub(ClothingItem i, params string[] words) =>
-        i.SubType is { } s && words.Any(w => s.Contains(w, StringComparison.OrdinalIgnoreCase));
+        words.Any(w => (i.SubType?.Contains(w, StringComparison.OrdinalIgnoreCase) ?? false)
+                    || i.Name.Contains(w, StringComparison.OrdinalIgnoreCase));
 
     /// <summary>Returns the first rule the piece breaks, or null when it is allowed.</summary>
     public static DressRule? Breaks(ClothingItem i, IReadOnlySet<DressRule> rules)
