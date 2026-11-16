@@ -1,0 +1,87 @@
+@model MannequinView
+@*
+    Provador: a light 2D avatar (SVG body in the person's skin tone and hair) with the photos of
+    the look's pieces placed on the body. Photos are blended with "multiply" so their light
+    backdrop disappears on the card. It is a preview of proportions and colors, not a photo-real try-on.
+*@
+@{
+    var p = Model.Prefs;
+    ClothingItem? Of(Category c) => Model.Items.FirstOrDefault(i => i.Category == c);
+    var top = Of(Category.Top);
+    var bottom = Of(Category.Bottom);
+    var one = Of(Category.OnePiece);
+    var outer = Of(Category.Outerwear);
+    var shoes = Of(Category.Shoes);
+    var acc = Of(Category.Accessory);
+
+    // Zones in % of the 200x420 stage: (left, top, width, height)
+    string Zone(double l, double t, double w, double h) => $"left:{l}%;top:{t}%;width:{w}%;height:{h}%";
+    string BottomZone(ClothingItem b) => b.Length switch
+    {
+        GarmentLength.Short or GarmentLength.Cropped => Zone(27, 47, 46, 22),
+        GarmentLength.Midi => Zone(25, 47, 50, 33),
+        _ => Zone(26, 47, 48, 44)
+    };
+    string TopZone(ClothingItem t) => t.Length == GarmentLength.Cropped ? Zone(22, 20, 56, 23) : Zone(20, 20, 60, 30);
+    string OnePieceZone(ClothingItem o) => o.Length switch
+    {
+        GarmentLength.Short => Zone(20, 20, 60, 46),
+        GarmentLength.Midi => Zone(19, 20, 62, 58),
+        _ => Zone(19, 20, 62, 72)
+    };
+    string Img(ClothingItem i, string zone, string cls) => i.PhotoFileName is { } f
+        ? $"<img class=\"mq-piece {cls}\" style=\"{zone}\" src=\"/uploads/{f}\" alt=\"{System.Net.WebUtility.HtmlEncode(i.Name)}\" loading=\"lazy\" />"
+        : $"<div class=\"mq-piece mq-swatch {cls}\" style=\"{zone};background:{ColorPalette.Get(i.PrimaryColor).Hex}\" title=\"{System.Net.WebUtility.HtmlEncode(i.Name)}\"></div>";
+    var hairLong = p.Hair is HairStyle.Long or HairStyle.Curly;
+}
+<div class="mannequin @(Model.Compact ? "mq-compact" : "") @(p.BodyPhoto != null ? "mq-photo" : "")" style="--skin:@p.SkinTone;--hair:@p.HairColor" aria-label="Prévia do look no avatar">
+    @if (p.BodyPhoto != null)
+    {
+        <img class="mq-body-photo" src="/uploads/@p.BodyPhoto" alt="" />
+    }
+    else
+    {
+    <svg class="mq-body" viewBox="0 0 200 420" aria-hidden="true">
+        @* hair behind the head *@
+        @if (hairLong)
+        {
+            <path class="mq-hair" d="M70 52 C64 20 136 20 130 52 L138 @(p.Hair == HairStyle.Curly ? "120" : "128") C120 @(p.Hair == HairStyle.Curly ? "132" : "138") 80 @(p.Hair == HairStyle.Curly ? "132" : "138") 62 @(p.Hair == HairStyle.Curly ? "120" : "128") Z" />
+        }
+        else if (p.Hair == HairStyle.Bob)
+        {
+            <path class="mq-hair" d="M68 54 C62 18 138 18 132 54 L134 88 C118 96 82 96 66 88 Z" />
+        }
+        @* body *@
+        <rect class="mq-skin" x="91" y="66" width="18" height="20" rx="6" />
+        <path class="mq-skin" d="M62 92 Q100 78 138 92 L146 190 L132 196 L124 120 L122 200 L78 200 L76 120 L68 196 L54 190 Z" />
+        <path class="mq-skin" d="M78 196 L98 196 L96 392 L84 392 Z" />
+        <path class="mq-skin" d="M102 196 L122 196 L116 392 L104 392 Z" />
+        <circle class="mq-skin" cx="100" cy="46" r="26" />
+        @if (p.FacePhoto == null)
+        {
+            @if (p.Hair == HairStyle.Bun)
+            {
+                <circle class="mq-hair" cx="100" cy="14" r="12" />
+            }
+            <path class="mq-hair" d="M74 44 C74 14 126 14 126 44 C116 30 92 26 74 44 Z" />
+            <circle cx="91" cy="48" r="2.2" fill="#3d2a24" />
+            <circle cx="109" cy="48" r="2.2" fill="#3d2a24" />
+            <path d="M93 58 Q100 63 107 58" stroke="#a3134c" stroke-width="2" fill="none" stroke-linecap="round" />
+            <circle cx="86" cy="56" r="4" fill="#f48fb1" opacity=".45" />
+            <circle cx="114" cy="56" r="4" fill="#f48fb1" opacity=".45" />
+        }
+    </svg>
+    }
+    @if (p.FacePhoto != null && p.BodyPhoto == null)
+    {
+        <img class="mq-face" src="/uploads/@p.FacePhoto" alt="" />
+    }
+    <div class="mq-layers">
+        @if (one != null) { @Html.Raw(Img(one, OnePieceZone(one), "mq-one")) }
+        @if (bottom != null && one == null) { @Html.Raw(Img(bottom, BottomZone(bottom), "mq-bottom")) }
+        @if (top != null && one == null) { @Html.Raw(Img(top, TopZone(top), "mq-top")) }
+        @if (outer != null) { @Html.Raw(Img(outer, Zone(14, 19, 72, 36), "mq-outer")) }
+        @if (acc != null) { @Html.Raw(Img(acc, Zone(32, 16, 36, 16), "mq-acc")) }
+        @if (shoes != null) { @Html.Raw(Img(shoes, Zone(28, 88, 44, 12), "mq-shoes")) }
+    </div>
+</div>

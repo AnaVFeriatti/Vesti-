@@ -1,0 +1,45 @@
+@page
+@model LaundryModel
+@{ ViewData["Title"] = "Lavanderia"; }
+
+<div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
+    <h1 class="h3 mb-0">Lavanderia</h1>
+    @if (Model.Dirty.Count > 0)
+    {
+        <form method="post" asp-page-handler="WashAll" data-celebrate><button class="btn btn-accent">🫧 Lavei tudo</button></form>
+    }
+</div>
+<p class="text-muted">Peça no cesto não aparece nas sugestões até você marcar que lavou. Toque numa peça para mandar para o cesto ou tirar de lá.</p>
+
+<h2 class="h5 mt-4">🧺 No cesto (@Model.Dirty.Count)</h2>
+@if (Model.Dirty.Count == 0)
+{
+    <p class="text-muted small">Cesto vazio. Tudo pronto para usar!</p>
+}
+<div class="wardrobe-grid mb-4">
+    @foreach (var i in Model.Dirty)
+    {
+        <form method="post" asp-page-handler="Toggle" asp-route-id="@i.Id">
+            <button class="wardrobe-card laundry-card is-dirty w-100 text-start" title="Marcar como lavada">
+                <partial name="_ItemThumb" model="i" />
+                <div class="mt-2 small fw-semibold text-truncate">@i.Name</div>
+                <div class="small text-muted">toque quando lavar</div>
+            </button>
+        </form>
+    }
+</div>
+
+<h2 class="h5">👕 Limpas (@Model.Clean.Count)</h2>
+<input class="form-control mb-3" placeholder="Buscar peça" data-instant-filter autocomplete="off" />
+<div class="wardrobe-grid">
+    @foreach (var i in Model.Clean)
+    {
+        <form method="post" asp-page-handler="Toggle" asp-route-id="@i.Id">
+            <button class="wardrobe-card laundry-card w-100 text-start" title="Mandar para o cesto">
+                <partial name="_ItemThumb" model="i" />
+                <div class="mt-2 small fw-semibold text-truncate">@i.Name</div>
+                <div class="small text-muted">@i.Category.DisplayName()</div>
+            </button>
+        </form>
+    }
+</div>

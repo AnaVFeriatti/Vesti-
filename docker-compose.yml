@@ -1,0 +1,48 @@
+services:
+  db:
+    image: postgres:16-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: montarlooks
+      POSTGRES_USER: looks
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-looks}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    ports:
+      - "${DB_PORT:-5433}:5432"   # porta no seu PC (5433 para não conflitar com outro Postgres); DBeaver, Power BI, pgAdmin etc.
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U looks -d montarlooks"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  web:
+    build: .
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      ConnectionStrings__Postgres: "Host=db;Database=montarlooks;Username=looks;Password=${POSTGRES_PASSWORD:-looks}"
+      RemoveBg__Url: "http://rembg:7000"   # IA local que tira o fundo das fotos; apague esta linha para desligar
+      DefaultCity__Name: "Ourinhos, São Paulo, Brasil"
+      DefaultCity__Latitude: "-22.97889"
+      DefaultCity__Longitude: "-49.87056"
+    volumes:
+      - uploads:/app/data/uploads
+    ports:
+      - "${WEB_PORT:-8081}:8080"   # porta no seu PC (8081 porque a 8080 já estava ocupada)
+
+  # IA de remoção de fundo (rembg / U2-Net), roda 100% no seu PC. Sem porta exposta: só o app usa.
+  # Na primeira foto ela baixa o modelo (~170 MB) e guarda no volume rembg-models.
+  rembg:
+    image: danielgatis/rembg:latest
+    restart: unless-stopped
+    command: ["s", "--host", "0.0.0.0", "--port", "7000"]
+    volumes:
+      - rembg-models:/root/.u2net
+
+volumes:
+  rembg-models:
+  pgdata:
+  uploads:

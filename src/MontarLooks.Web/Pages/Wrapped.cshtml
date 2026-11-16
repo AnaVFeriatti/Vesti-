@@ -1,0 +1,277 @@
+@page
+@model WrappedModel
+@{
+    var d = Model.Data;
+    ViewData["Title"] = $"Wrapped · {d.Label}";
+    string Plural(int n, string one, string many) => n == 1 ? $"1 {one}" : $"{n} {many}";
+    string Ink(string hex)
+    {
+        var h = hex.TrimStart('#');
+        if (h.Length != 6) return "#3d2a24";
+        int r = Convert.ToInt32(h[..2], 16), g = Convert.ToInt32(h[2..4], 16), b = Convert.ToInt32(h[4..], 16);
+        return (0.299 * r + 0.587 * g + 0.114 * b) > 150 ? "#3d2a24" : "#ffffff";
+    }
+    var monthName = d.Label.Split(' ')[0];
+}
+<link rel="stylesheet" href="~/css/insights.css" asp-append-version="true" />
+
+<div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
+    <h1 class="h3 mb-0">Wrapped do mês</h1>
+    <nav class="d-flex align-items-center gap-2" aria-label="Escolher mês">
+        @if (Model.Previous is { } prev)
+        {
+            <a class="btn btn-outline-secondary btn-sm" asp-page="/Wrapped" asp-route-month="@WrappedModel.Key(prev)" aria-label="Mês anterior com looks">‹ @WrappedMonth.MonthLabel(prev)</a>
+        }
+        @if (Model.MonthsWithData.Count > 0)
+        {
+            <form method="get" class="d-flex">
+                <label for="month-pick" class="visually-hidden">Mês</label>
+                <select id="month-pick" name="month" class="form-select form-select-sm" onchange="this.form.submit()">
+                    @if (d.IsEmpty) { <option value="@WrappedModel.Key(d.Month)" selected>@d.Label</option> }
+                    @foreach (var m in Model.MonthsWithData)
+                    {
+                        <option value="@WrappedModel.Key(m)" selected="@(m == d.Month)">@WrappedMonth.MonthLabel(m)</option>
+                    }
+                </select>
+                <noscript><button class="btn btn-sm btn-outline-secondary ms-1">Ver</button></noscript>
+            </form>
+        }
+        @if (Model.Next is { } next)
+        {
+            <a class="btn btn-outline-secondary btn-sm" asp-page="/Wrapped" asp-route-month="@WrappedModel.Key(next)" aria-label="Próximo mês com looks">@WrappedMonth.MonthLabel(next) ›</a>
+        }
+    </nav>
+</div>
+
+@if (d.IsEmpty)
+{
+    <div class="card p-4 text-center wrapped-empty">
+        <div class="empty-emoji" aria-hidden="true">🌙</div>
+        <p class="fw-semibold mb-1">@d.Label ainda não tem looks registrados.</p>
+        <p class="text-muted small">Registre o que você vestiu na página inicial e o seu Wrapped aparece aqui, cheio de surpresas.</p>
+        @if (Model.MonthsWithData.Count > 0)
+        {
+            <p class="small mb-2">Que tal relembrar um mês com looks?</p>
+            <div class="d-flex flex-wrap justify-content-center gap-2">
+                @foreach (var m in Model.MonthsWithData.Where(m => m < d.Month).Take(6).DefaultIfEmpty(Model.MonthsWithData[0]).Distinct())
+                {
+                    <a class="btn btn-outline-secondary btn-sm" asp-page="/Wrapped" asp-route-month="@WrappedModel.Key(m)">@WrappedMonth.MonthLabel(m)</a>
+                }
+            </div>
+        }
+        else
+        {
+            <a asp-page="/Index" class="btn btn-accent mt-2">Montar o look de hoje</a>
+        }
+    </div>
+    return;
+}
+
+<div class="wrapped" data-wrapped>
+    <div class="wrapped-progress" aria-hidden="true"></div>
+    <div class="wrapped-stage" tabindex="0" aria-roledescription="carrossel" aria-label="Wrapped de @d.Label. Toque ou use as setas para avançar." aria-live="polite">
+
+        <section class="wslide wslide-intro" aria-label="Abertura">
+            <div class="wslide-kicker">Vestiê apresenta</div>
+            <div class="wslide-title">Seu <span>@monthName</span> em looks</div>
+            <div class="wslide-deco" aria-hidden="true">🌸 🌷 🌼</div>
+            <div class="wslide-hint">toque para começar →</div>
+        </section>
+
+        <section class="wslide wslide-pink" aria-label="Total de looks">
+            <div class="wslide-kicker">Em @monthName você montou</div>
+            <div class="wslide-big" data-count="@d.TotalLooks">@d.TotalLooks</div>
+            <div class="wslide-title">@(d.TotalLooks == 1 ? "look" : "looks")</div>
+            <p class="wslide-text">em @Plural(d.DaysDressed, "dia", "dias diferentes"), usando @Plural(d.DistinctPieces, "peça", "peças") do seu guarda-roupa.</p>
+            @if (d.AverageRating is { } rating) { <p class="wslide-text">Nota média: <strong>@rating.ToString("0.0")</strong> ⭐</p> }
+        </section>
+
+        @if (d.ColorOfMonth is { } col)
+        {
+            <section class="wslide wslide-color" aria-label="Cor do mês" style="--swatch:@col.Value.Hex;--swatch-ink:@Ink(col.Value.Hex)">
+                <div class="wslide-kicker">A cor do mês foi</div>
+                <div class="wswatch" aria-hidden="true"></div>
+                <div class="wslide-title">@col.Value.Name</div>
+                <p class="wslide-text">apareceu @Plural(col.Count, "vez", "vezes") nos seus looks.</p>
+            </section>
+        }
+
+        @if (d.MostLoved is { } loved)
+        {
+            <section class="wslide wslide-purple" aria-label="Peça mais amada">
+                <div class="wslide-kicker">Sua peça mais amada 💜</div>
+                <div class="wslide-thumb"><partial name="_ItemThumb" model="loved.Value" /></div>
+                <div class="wslide-title wslide-title-sm">@loved.Value.Name</div>
+                <p class="wslide-text">usada @Plural(loved.Count, "vez", "vezes"). Inseparáveis!</p>
+            </section>
+        }
+
+        @if (d.FavoriteOccasion is { } occ)
+        {
+            <section class="wslide wslide-green" aria-label="Ocasião favorita">
+                <div class="wslide-kicker">Ocasião favorita</div>
+                <div class="wslide-emoji" aria-hidden="true">@WrappedModel.OccasionEmoji(occ.Value)</div>
+                <div class="wslide-title wslide-title-sm">@occ.Value.DisplayName()</div>
+                <p class="wslide-text">@Plural(occ.Count, "look", "looks") para essa ocasião.</p>
+            </section>
+        }
+
+        @if (d.FavoriteCombo is { } combo)
+        {
+            <section class="wslide wslide-pink" aria-label="Combinação queridinha">
+                <div class="wslide-kicker">Combinação queridinha</div>
+                <div class="wslide-duo">
+                    <div class="wslide-thumb"><partial name="_ItemThumb" model="combo.Value[0]" /></div>
+                    <span class="wslide-plus" aria-hidden="true">+</span>
+                    <div class="wslide-thumb"><partial name="_ItemThumb" model="combo.Value[1]" /></div>
+                </div>
+                <div class="wslide-title wslide-title-sm">@combo.Value[0].Name + @combo.Value[1].Name</div>
+                <p class="wslide-text">@(combo.Count > 1 ? $"juntas {combo.Count} vezes. Dupla imbatível!" : "a dupla que brilhou no mês.")</p>
+            </section>
+        }
+
+        @if (d.AvgCostPerWear is { } cpu)
+        {
+            <section class="wslide wslide-brown" aria-label="Custo por uso médio">
+                <div class="wslide-kicker">Custo por uso médio</div>
+                <div class="wslide-big wslide-big-money">@cpu.ToString("C")</div>
+                <p class="wslide-text">por vez que você vestiu uma peça (considerando @Plural(d.PricedPieces, "peça com preço", "peças com preço")). Quanto mais usa, mais barato fica! 💸</p>
+            </section>
+        }
+
+        <section class="wslide wslide-purple" aria-label="Peças estreadas">
+            <div class="wslide-kicker">Estreias do mês</div>
+            @if (d.Debuts.Count == 0)
+            {
+                <div class="wslide-emoji" aria-hidden="true">♻️</div>
+                <p class="wslide-text">Nenhuma estreia: você aproveitou o que já tinha. Amamos! 🌱</p>
+            }
+            else
+            {
+                <div class="wslide-big" data-count="@d.Debuts.Count">@d.Debuts.Count</div>
+                <div class="wslide-title wslide-title-sm">@(d.Debuts.Count == 1 ? "peça estreou" : "peças estrearam")</div>
+                <div class="wslide-mini-grid">
+                    @foreach (var i in d.Debuts.Take(6))
+                    {
+                        <div class="wslide-mini"><partial name="_ItemThumb" model="i" /></div>
+                    }
+                </div>
+            }
+        </section>
+
+        <section class="wslide wslide-rain" aria-label="Dias com chuva">
+            <div class="wslide-kicker">Previsão do mês</div>
+            <div class="wslide-emoji" aria-hidden="true">@(d.RainyDays > 0 ? "🌧️" : "☀️")</div>
+            <div class="wslide-title wslide-title-sm">@(d.RainyDays == 0 ? "Nenhum dia de chuva" : Plural(d.RainyDays, "dia com chuva", "dias com chuva"))</div>
+            @if (d.AvgTemperature is { } t) { <p class="wslide-text">Temperatura média dos seus looks: <strong>@t.ToString("0.#")°C</strong></p> }
+        </section>
+
+        <section class="wslide wslide-summary" aria-label="Resumo">
+            <div class="wsummary" id="wrapped-summary">
+                <div class="wsummary-head">🌸 Meu @monthName no Vestiê</div>
+                <dl class="wsummary-grid">
+                    <div><dt>Looks</dt><dd>@d.TotalLooks</dd></div>
+                    @if (d.ColorOfMonth is { } c2) { <div><dt>Cor do mês</dt><dd><span class="color-dot" style="background:@c2.Value.Hex"></span> @c2.Value.Name</dd></div> }
+                    @if (d.MostLoved is { } l2) { <div><dt>Peça mais amada</dt><dd>@l2.Value.Name</dd></div> }
+                    @if (d.FavoriteOccasion is { } o2) { <div><dt>Ocasião favorita</dt><dd>@WrappedModel.OccasionEmoji(o2.Value) @o2.Value.DisplayName()</dd></div> }
+                    @if (d.AvgCostPerWear is { } cpu2) { <div><dt>Custo por uso</dt><dd>@cpu2.ToString("C")</dd></div> }
+                    <div><dt>Estreias</dt><dd>@d.Debuts.Count</dd></div>
+                    <div><dt>Dias com chuva</dt><dd>@d.RainyDays</dd></div>
+                </dl>
+            </div>
+            <div class="wsummary-actions" data-no-advance>
+                <button type="button" class="btn btn-accent" data-share>📤 Compartilhar</button>
+                <button type="button" class="btn btn-outline-secondary" data-restart>↺ Ver de novo</button>
+            </div>
+            <div class="wslide-share-msg small" role="status" data-share-msg></div>
+        </section>
+    </div>
+    <div class="wrapped-controls">
+        <button type="button" class="btn btn-outline-secondary btn-sm" data-prev aria-label="Slide anterior">‹ Voltar</button>
+        <span class="small text-muted" data-counter></span>
+        <button type="button" class="btn btn-outline-secondary btn-sm" data-next aria-label="Próximo slide">Avançar ›</button>
+    </div>
+</div>
+
+@section Scripts {
+<script>
+(() => {
+    const root = document.querySelector('[data-wrapped]');
+    if (!root) return;
+    const stage = root.querySelector('.wrapped-stage');
+    const slides = [...stage.querySelectorAll('.wslide')];
+    const progress = root.querySelector('.wrapped-progress');
+    const counter = root.querySelector('[data-counter]');
+    const reduced = window.matchMedia('(prefers-reduced-motion: reduce)');
+    let current = 0;
+
+    progress.innerHTML = slides.map(() => '<span><i></i></span>').join('');
+    const bars = [...progress.children];
+
+    function countUp(el) {
+        const target = parseInt(el.dataset.count, 10);
+        if (!target || reduced.matches) { el.textContent = target; return; }
+        const start = performance.now(), dur = 900;
+        const tick = now => {
+            const p = Math.min(1, (now - start) / dur);
+            el.textContent = Math.round(target * (1 - Math.pow(1 - p, 3)));
+            if (p < 1) requestAnimationFrame(tick);
+        };
+        requestAnimationFrame(tick);
+    }
+
+    function show(i) {
+        current = Math.max(0, Math.min(slides.length - 1, i));
+        slides.forEach((s, k) => {
+            s.classList.toggle('is-active', k === current);
+            s.classList.toggle('is-past', k < current);
+            s.setAttribute('aria-hidden', k === current ? 'false' : 'true');
+            s.inert = k !== current;
+        });
+        bars.forEach((b, k) => b.classList.toggle('done', k <= current));
+        counter.textContent = `${current + 1} de ${slides.length}`;
+        slides[current].querySelectorAll('[data-count]').forEach(countUp);
+    }
+
+    stage.addEventListener('click', e => {
+        if (e.target.closest('[data-no-advance], a, button, select')) return;
+        const r = stage.getBoundingClientRect();
+        show(e.clientX - r.left < r.width / 3 ? current - 1 : current + 1);
+    });
+    stage.addEventListener('keydown', e => {
+        if (e.key === 'ArrowRight' || e.key === ' ' || e.key === 'Enter') { e.preventDefault(); show(current + 1); }
+        if (e.key === 'ArrowLeft') { e.preventDefault(); show(current - 1); }
+    });
+    // Swipe on touch screens.
+    let x0 = null;
+    stage.addEventListener('touchstart', e => { x0 = e.touches[0].clientX; }, { passive: true });
+    stage.addEventListener('touchend', e => {
+        if (x0 === null) return;
+        const dx = e.changedTouches[0].clientX - x0; x0 = null;
+        if (Math.abs(dx) > 50) { e.preventDefault(); show(dx < 0 ? current + 1 : current - 1); }
+    });
+
+    root.querySelector('[data-prev]').addEventListener('click', () => show(current - 1));
+    root.querySelector('[data-next]').addEventListener('click', () => show(current + 1));
+    root.querySelector('[data-restart]').addEventListener('click', () => show(0));
+
+    const msg = root.querySelector('[data-share-msg]');
+    root.querySelector('[data-share]').addEventListener('click', async () => {
+        const lines = [...root.querySelectorAll('.wsummary-grid > div')]
+            .map(d => `${d.querySelector('dt').textContent}: ${d.querySelector('dd').textContent.trim()}`);
+        const text = `${root.querySelector('.wsummary-head').textContent.trim()}\n${lines.join('\n')}`;
+        try {
+            if (navigator.share) { await navigator.share({ title: document.title, text, url: location.href }); return; }
+            await navigator.clipboard.writeText(`${text}\n${location.href}`);
+            msg.textContent = 'Resumo copiado! É só colar onde quiser. 💕';
+        } catch (err) {
+            if (err && err.name === 'AbortError') return;
+            msg.textContent = 'Não deu para compartilhar daqui. Que tal um print desta tela? 📸';
+        }
+    });
+
+    root.classList.add('is-ready');
+    show(0);
+})();
+</script>
+}

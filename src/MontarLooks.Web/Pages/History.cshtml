@@ -1,0 +1,46 @@
+@page
+@model HistoryModel
+@{ ViewData["Title"] = "Histórico"; }
+
+<div class="d-flex justify-content-between align-items-center mb-3">
+    <h1 class="h3 mb-0">Histórico de looks</h1>
+    <a asp-page-handler="Csv" class="btn btn-outline-secondary btn-sm">⬇️ Exportar CSV</a>
+</div>
+
+@if (Model.Outfits.Count == 0)
+{
+    <p class="text-muted">Nenhum look registrado ainda. Na tela <a asp-page="/Index">Look do dia</a>, clique em "Vou usar este".</p>
+}
+
+@foreach (var o in Model.Outfits)
+{
+    <div class="card p-3 mb-3">
+        <div class="d-flex flex-wrap justify-content-between gap-2 mb-2">
+            <div>
+                <strong>@o.WornOn.ToString("ddd, dd/MM/yyyy")</strong>
+                <span class="text-muted">· @o.Occasion.DisplayName()</span>
+                @if (o.TemperatureC.HasValue) { <span class="text-muted">· @o.TemperatureC.Value.ToString("0")°C @o.WeatherDescription</span> }
+                @if (!string.IsNullOrEmpty(o.Title)) { <div class="small">@o.Title</div> }
+            </div>
+            <div class="d-flex gap-1 align-items-start">
+                @for (var star = 1; star <= 5; star++)
+                {
+                    <form method="post" asp-page-handler="Rate" class="d-inline">
+                        <input type="hidden" name="id" value="@o.Id" /><input type="hidden" name="rating" value="@star" />
+                        <button class="btn btn-link p-0 text-decoration-none" title="Nota @star">@(o.Rating >= star ? "★" : "☆")</button>
+                    </form>
+                }
+                <form method="post" asp-page-handler="Delete" class="d-inline ms-2">
+                    <input type="hidden" name="id" value="@o.Id" />
+                    <button class="btn btn-sm btn-outline-danger" onclick="return confirm('Apagar este registro?')">×</button>
+                </form>
+            </div>
+        </div>
+        <div class="look-items">
+            @foreach (var i in o.Items.Select(x => x.ClothingItem))
+            {
+                <div class="look-item"><partial name="_ItemThumb" model="i" /><div class="mt-1">@i.Name</div></div>
+            }
+        </div>
+    </div>
+}

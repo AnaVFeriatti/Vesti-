@@ -1,0 +1,154 @@
+/* =========================================================
+   MontarLooks · insights (Cápsula, Lista de desejos, Desapego, Wrapped)
+   Usa as variáveis do tema em site.css.
+   ========================================================= */
+
+.insights-head h1 { font-family: var(--title-font); color: var(--ink); }
+.empty-emoji { font-size: 2.6rem; line-height: 1; margin-bottom: .5rem; }
+.min-w-0 { min-width: 0; }
+
+/* ---------- ranking bars (Cápsula) ---------- */
+.rank-list { list-style: none; padding: 0; margin: 0; counter-reset: rank; }
+.rank-list li { counter-increment: rank; }
+.rank-row {
+    display: grid; grid-template-columns: 1.6rem 52px minmax(0, 1fr) auto; align-items: center; gap: .7rem;
+    padding: .4rem .3rem; border-radius: 14px; text-decoration: none; color: inherit;
+}
+.rank-row::before { content: counter(rank); font-weight: 800; color: var(--pink); font-family: var(--title-font); text-align: center; }
+.rank-row:hover, .rank-row:focus-visible { background: var(--pink-soft); }
+.rank-thumb { width: 52px; }
+.rank-thumb .item-thumb { border-radius: 12px; }
+.rank-body { min-width: 0; }
+.rank-num { font-weight: 700; color: var(--purple); font-size: .9rem; white-space: nowrap; }
+.rank-bar { display: block; height: 8px; border-radius: 999px; background: var(--pink-soft); overflow: hidden; margin-top: .3rem; }
+.rank-bar > span { display: block; height: 100%; border-radius: inherit; background: linear-gradient(90deg, var(--pink-petal), var(--pink)); }
+.layer-list { list-style: none; padding: 0; margin: 0; display: flex; flex-wrap: wrap; gap: .4rem; }
+.layer-list li { background: var(--purple-soft); border-radius: 999px; padding: .25rem .75rem; font-size: .88rem; }
+.badge-layer { background: var(--purple-soft); color: var(--purple); }
+.insights-grid-sm { grid-template-columns: repeat(auto-fill, minmax(110px, 1fr)); gap: .8rem; }
+
+.gap-list { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 340px), 1fr)); gap: .6rem 1.2rem; }
+.gap-row { display: flex; gap: .8rem; align-items: flex-start; padding: .6rem; border-radius: 14px; background: #fff; border: 1px solid var(--line); }
+.gap-row .rank-bar > span { background: linear-gradient(90deg, var(--leaf), var(--green)); }
+.gap-swatch { flex: 0 0 auto; width: 34px; height: 34px; border-radius: 50%; border: 3px solid #fff; box-shadow: 0 0 0 1px var(--line); }
+.gap-body { flex: 1; min-width: 0; }
+.gap-num { color: var(--green); }
+.gap-zero { opacity: .7; }
+
+/* ---------- Lista de desejos ---------- */
+.wish-card { border-top: 5px solid var(--pink-petal); }
+.wish-card:nth-of-type(3n+2) { border-top-color: var(--lilac); }
+.wish-card:nth-of-type(3n) { border-top-color: var(--leaf); }
+.wish-score {
+    flex: 0 0 auto; display: flex; flex-direction: column; align-items: center; justify-content: center;
+    width: 70px; height: 70px; border-radius: 50%; background: var(--pink-soft); color: var(--pink-dark);
+}
+.wish-score-num { font-size: 1.5rem; font-weight: 800; line-height: 1; font-family: var(--title-font); }
+.wish-score-lbl { font-size: .72rem; font-weight: 700; }
+.wish-score-zero { background: var(--brown-soft); color: var(--brown); }
+@media (min-width: 992px) { .wish-form { position: sticky; top: 1rem; } }
+
+/* ---------- Desapego ---------- */
+.declutter-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 290px), 1fr)); gap: 1rem; }
+.declutter-card { display: flex; flex-direction: column; }
+.declutter-thumb { flex: 0 0 84px; width: 84px; }
+.badge-idle { background: var(--purple-soft); color: var(--purple); }
+.badge-never { background: var(--pink-soft); color: var(--pink-dark); }
+
+/* ---------- Wrapped ---------- */
+.wrapped { max-width: 420px; margin: 0 auto; }
+.wrapped-progress { display: flex; gap: 4px; margin-bottom: .5rem; }
+.wrapped-progress span { flex: 1; height: 4px; border-radius: 999px; background: var(--line); overflow: hidden; }
+.wrapped-progress i { display: block; height: 100%; width: 0; background: var(--pink); transition: width .35s ease; }
+.wrapped-progress span.done i { width: 100%; }
+
+.wrapped-stage {
+    position: relative; aspect-ratio: 9 / 16; max-height: 70vh; margin: 0 auto;
+    border-radius: 28px; overflow: hidden; cursor: pointer; user-select: none;
+    box-shadow: 0 18px 40px rgba(194, 24, 91, .18), 0 0 0 1px var(--line);
+    background: var(--pink-soft);
+}
+.wrapped-stage:focus-visible { outline: 3px solid var(--pink); outline-offset: 3px; }
+.wrapped-controls { display: flex; justify-content: space-between; align-items: center; margin-top: .75rem; }
+
+.wslide {
+    position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center;
+    gap: .6rem; padding: 2rem 1.6rem; text-align: center; color: var(--ink);
+    opacity: 0; transform: translateX(40px) scale(.96); pointer-events: none;
+    transition: opacity .45s ease, transform .55s cubic-bezier(.2, .8, .2, 1);
+}
+.wslide.is-past { transform: translateX(-40px) scale(.96); }
+.wslide.is-active { opacity: 1; transform: none; pointer-events: auto; }
+.wslide > * { transition: transform .6s cubic-bezier(.2, .8, .2, 1), opacity .6s ease; }
+.wslide:not(.is-active) > * { transform: translateY(14px); opacity: 0; }
+.wslide.is-active > :nth-child(2) { transition-delay: .08s; }
+.wslide.is-active > :nth-child(3) { transition-delay: .16s; }
+.wslide.is-active > :nth-child(4) { transition-delay: .24s; }
+.wslide.is-active > :nth-child(5) { transition-delay: .32s; }
+
+/* No JavaScript: show the slides as a simple vertical list. */
+.wrapped:not(.is-ready) .wrapped-stage { aspect-ratio: auto; max-height: none; cursor: default; }
+.wrapped:not(.is-ready) .wslide { position: static; opacity: 1; transform: none; min-height: 60vh; }
+.wrapped:not(.is-ready) .wslide > * { opacity: 1; transform: none; }
+.wrapped:not(.is-ready) .wrapped-controls, .wrapped:not(.is-ready) .wrapped-progress { display: none; }
+
+.wslide-kicker { font-weight: 700; text-transform: uppercase; letter-spacing: .08em; font-size: .8rem; opacity: .85; }
+.wslide-title { font-family: var(--title-font); font-weight: 700; font-size: 2rem; line-height: 1.15; }
+.wslide-title span { color: var(--pink); }
+.wslide-title-sm { font-size: 1.45rem; }
+.wslide-big { font-family: var(--title-font); font-weight: 800; font-size: 6rem; line-height: 1; color: var(--pink-dark); }
+.wslide-big-money { font-size: 3.4rem; }
+.wslide-text { max-width: 30ch; margin: 0; font-size: 1rem; }
+.wslide-hint { margin-top: 1.5rem; font-size: .85rem; color: var(--muted); animation: wpulse 1.6s ease-in-out infinite; }
+.wslide-deco { font-size: 1.8rem; letter-spacing: .4rem; }
+.wslide-emoji { font-size: 4.5rem; line-height: 1; }
+.wslide-thumb { width: 150px; }
+.wslide-thumb .item-thumb { border-radius: 22px; border-width: 4px; box-shadow: 0 10px 24px rgba(61, 42, 36, .18); }
+.wslide.is-active .wslide-thumb .item-thumb { animation: wpop .7s cubic-bezier(.2, 1.4, .4, 1) both .15s; }
+.wslide-duo { display: flex; align-items: center; gap: .6rem; }
+.wslide-duo .wslide-thumb { width: 120px; }
+.wslide-duo .wslide-thumb:first-child { transform: rotate(-5deg); }
+.wslide-duo .wslide-thumb:last-child { transform: rotate(5deg); }
+.wslide-plus { font-size: 2rem; font-weight: 800; color: var(--pink); }
+.wslide-mini-grid { display: grid; grid-template-columns: repeat(3, 70px); gap: .5rem; }
+
+.wslide-intro { background: radial-gradient(circle at 85% 12%, rgba(255, 255, 255, .8) 0 9%, transparent 9.5%), radial-gradient(circle at 12% 88%, rgba(255, 255, 255, .6) 0 12%, transparent 12.5%), linear-gradient(160deg, var(--pink-soft), var(--purple-soft)); }
+.wslide-pink { background: linear-gradient(165deg, #fff 0%, var(--pink-soft) 100%); }
+.wslide-purple { background: linear-gradient(165deg, var(--purple-soft), #fff); }
+.wslide-purple .wslide-big { color: var(--purple); }
+.wslide-green { background: linear-gradient(165deg, var(--green-soft), #fff); }
+.wslide-brown { background: linear-gradient(165deg, var(--brown-soft), #fff); }
+.wslide-brown .wslide-big { color: var(--brown); }
+.wslide-rain { background: linear-gradient(180deg, #e7f0fb, #fff); }
+.wslide-color { background: var(--swatch); color: var(--swatch-ink); }
+.wswatch {
+    width: 170px; height: 170px; border-radius: 50%; background: var(--swatch);
+    border: 6px solid rgba(255, 255, 255, .85); box-shadow: 0 0 0 8px rgba(255, 255, 255, .25), 0 14px 30px rgba(0, 0, 0, .2);
+}
+.wslide.is-active .wswatch { animation: wpop .8s cubic-bezier(.2, 1.4, .4, 1) both .1s; }
+
+.wslide-summary { background: linear-gradient(160deg, var(--pink-soft), var(--green-soft)); justify-content: center; }
+.wsummary { width: 100%; background: #fff; border-radius: 22px; padding: 1.2rem; box-shadow: 0 10px 26px rgba(194, 24, 91, .14); text-align: left; }
+.wsummary-head { font-family: var(--title-font); font-weight: 700; font-size: 1.2rem; color: var(--pink-dark); margin-bottom: .6rem; text-align: center; }
+.wsummary-grid { display: grid; grid-template-columns: 1fr 1fr; gap: .6rem .8rem; margin: 0; }
+.wsummary-grid dt { font-size: .72rem; text-transform: uppercase; letter-spacing: .05em; color: var(--muted); font-weight: 700; }
+.wsummary-grid dd { margin: 0; font-weight: 700; font-size: .95rem; overflow-wrap: anywhere; }
+.wsummary-actions { display: flex; gap: .5rem; flex-wrap: wrap; justify-content: center; margin-top: .6rem; }
+.wslide-share-msg { min-height: 1.2em; color: var(--green); font-weight: 600; }
+
+@keyframes wpop { from { transform: scale(.4); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+@keyframes wpulse { 0%, 100% { opacity: .55; } 50% { opacity: 1; } }
+
+@media (max-width: 420px) {
+    .wrapped-stage { border-radius: 20px; max-height: 72vh; }
+    .wslide-big { font-size: 4.6rem; }
+    .wslide-title { font-size: 1.6rem; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .wslide, .wslide > *, .wrapped-progress i { transition: none !important; }
+    .wslide, .wslide.is-past { transform: none; }
+    .wslide:not(.is-active) > * { transform: none; }
+    .wslide-hint, .wslide.is-active .wswatch, .wslide.is-active .wslide-thumb .item-thumb { animation: none !important; }
+    .rank-row, .wardrobe-card .item-thumb { transition: none; }
+}

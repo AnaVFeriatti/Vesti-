@@ -1,0 +1,85 @@
+@page
+@model MontarLooks.Web.Pages.Wardrobe.IndexModel
+@{ ViewData["Title"] = "Guarda-roupa"; }
+
+<div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
+    <h1 class="h3 mb-0">Guarda-roupa <span class="text-muted fs-6">(@Model.Items.Count peças)</span></h1>
+    <div class="d-flex gap-2">
+        <a asp-page="Bulk" class="btn btn-outline-secondary">📷 Enviar várias fotos</a>
+        <a asp-page="Edit" class="btn btn-accent">+ Nova peça</a>
+    </div>
+</div>
+
+@if (Model.PendingReview > 0)
+{
+    <div class="alert alert-warning">
+        Você tem <strong>@Model.PendingReview</strong> peça(s) enviadas por foto esperando os detalhes (categoria, cor, estilo).
+        Elas aparecem primeiro na lista e só entram nos looks depois de completadas.
+    </div>
+}
+
+<form method="get" class="card p-3 mb-4">
+    <div class="row g-2 align-items-end">
+        <div class="col-12 col-md-4">
+            <input name="q" value="@Model.Q" class="form-control" placeholder="Buscar por nome ou tipo" data-instant-filter autocomplete="off" />
+        </div>
+        <div class="col-6 col-md-3">
+            <select name="category" class="form-select" asp-for="Category" asp-items="Html.GetEnumSelectList<Category>()">
+                <option value="">Todas as categorias</option>
+            </select>
+        </div>
+        <div class="col-6 col-md-3">
+            <select name="color" class="form-select">
+                <option value="">Todas as cores</option>
+                @foreach (var c in ColorPalette.All)
+                {
+                    <option value="@c.Key" selected="@(Model.Color == c.Key)">@c.Name</option>
+                }
+            </select>
+        </div>
+        <div class="col-12 col-md-2 d-flex gap-2">
+            <button class="btn btn-outline-secondary w-100">Filtrar</button>
+        </div>
+        <div class="col-12">
+            <div class="form-check">
+                <input class="form-check-input" type="checkbox" name="showInactive" value="true" id="inactive" checked="@Model.ShowInactive" />
+                <label class="form-check-label small" for="inactive">Mostrar peças desativadas (doadas, guardadas)</label>
+            </div>
+        </div>
+    </div>
+</form>
+
+@if (Model.Items.Count == 0)
+{
+    <p class="text-muted">Nenhuma peça encontrada.</p>
+}
+<div class="wardrobe-grid">
+    @foreach (var i in Model.Items)
+    {
+        var c = ColorPalette.Get(i.PrimaryColor);
+        <a class="wardrobe-card @(i.IsActive ? "" : "opacity-50")" asp-page="Edit" asp-route-id="@i.Id">
+            <partial name="_ItemThumb" model="i" />
+            <div class="mt-2 small fw-semibold text-truncate">@i.Name</div>
+            <div class="small text-muted">
+                <span class="color-dot" style="background:@c.Hex"></span> @c.Name · @i.Style.DisplayName()
+                @if (i.NeedsReview) { <span class="badge text-bg-warning">completar</span> }
+            </div>
+            @{
+                var tags = new List<string>();
+                if (i.Sleeve is { } sl) tags.Add(sl.DisplayName());
+                if (i.Neckline is { } nk) tags.Add(nk.DisplayName());
+                if (i.Length is { } ln) tags.Add(ln.DisplayName());
+                if (i.Fit is { } ft) tags.Add(ft.DisplayName());
+                if (i.Pattern is { } pt && pt != Pattern.Solid) tags.Add(pt.DisplayName());
+                if (i.Fabric is { } fb) tags.Add(fb.DisplayName());
+                if (i.Rise is { } rs) tags.Add(rs.DisplayName());
+            }
+            @if (tags.Count > 0)
+            {
+                <div class="detail-tags">
+                    @foreach (var t in tags) { <span class="detail-tag">@t</span> }
+                </div>
+            }
+        </a>
+    }
+</div>

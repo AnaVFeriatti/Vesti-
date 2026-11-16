@@ -1,0 +1,318 @@
+@page
+@model PaletteModel
+@using System.Globalization
+@using System.Text.Json
+@{
+    ViewData["Title"] = "Paleta pessoal";
+    var p = Model.Profile;
+    string Pts(int v) => v > 0 ? "+" + v : v.ToString(CultureInfo.InvariantCulture);
+    string Pct(double v) => ((v + 1) / 2 * 100).ToString("0.#", CultureInfo.InvariantCulture);
+    var drapeSeason = p == null ? null : new
+    {
+        name = p.Name,
+        best = p.Swatches.Take(4).Select(s => s.Hex).ToArray(),
+        avoid = p.Avoid.Select(k => ColorPalette.Get(k).Hex).Take(4).ToArray()
+    };
+    var allSwatches = (p?.Swatches ?? Array.Empty<NamedColor>())
+        .Concat(ColorPalette.All.Where(c => c.Key != "estampado").Select(c => new NamedColor(c.Name, c.Hex)))
+        .ToList();
+}
+<link rel="stylesheet" href="~/css/palette.css" asp-append-version="true" />
+
+<div class="palette-page">
+<header class="mb-4">
+    <h1 class="h3 mb-1">Paleta pessoal</h1>
+    <p class="text-muted mb-0">Descubra quais cores iluminam o seu rosto, no sistema de 12 estações. Leva uns 2 minutinhos e tudo acontece aqui no seu computador.</p>
+</header>
+
+@if (p != null)
+{
+    <section id="resultado" class="card p-4 mb-4 pal-result" aria-labelledby="pal-season">
+        <div class="d-flex flex-wrap align-items-center gap-3 mb-2">
+            <span class="pal-emoji" aria-hidden="true">@p.Emoji</span>
+            <div>
+                <div class="pal-family">Família @p.Family</div>
+                <h2 id="pal-season" class="h3 mb-0">@p.Name</h2>
+                <div class="text-muted">@p.Summary</div>
+            </div>
+        </div>
+        <p class="mb-3">@p.Description</p>
+
+        @if (Model.Score is { } s)
+        {
+            <details class="pal-score mb-3" open>
+                <summary>Como chegamos nessa estação</summary>
+                <div class="row g-3 mt-1">
+                    <div class="col-md-5">
+                        @foreach (var (label, left, right, value) in new[] { ("Temperatura", "frio", "quente", s.Warmth), ("Profundidade", "claro", "profundo", s.Depth), ("Intensidade", "suave", "brilhante", s.Clarity) })
+                        {
+                            <div class="pal-axis mb-2">
+                                <div class="d-flex justify-content-between small"><span>@left</span><strong>@label</strong><span>@right</span></div>
+                                <div class="pal-axis-bar" role="img" aria-label="@label: @((value * 100).ToString("0"))% (de −100% @left a +100% @right)">
+                                    <span class="pal-axis-mark" style="left:@Pct(value)%"></span>
+                                </div>
+                            </div>
+                        }
+                        <p class="small text-muted mt-2 mb-0">
+                            O eixo mais forte foi <strong>@s.Dominant</strong>, por isso sua estação é <strong>@s.Season</strong>.
+                            Cada eixo vai de −100% a +100% (pontos ÷ máximo possível).
+                        </p>
+                    </div>
+                    <div class="col-md-7">
+                        <table class="table table-sm small mb-0">
+                            <thead><tr><th>Pergunta</th><th>Resposta</th><th class="text-center" title="Temperatura">🌡️</th><th class="text-center" title="Profundidade">🌗</th><th class="text-center" title="Intensidade">✨</th></tr></thead>
+                            <tbody>
+                                @foreach (var l in s.Lines)
+                                {
+                                    <tr><td>@l.Question</td><td>@l.Answer</td><td class="text-center">@Pts(l.Warmth)</td><td class="text-center">@Pts(l.Depth)</td><td class="text-center">@Pts(l.Clarity)</td></tr>
+                                }
+                                <tr class="fw-bold"><td colspan="2">Total (máximo ±@PaletteService.MaxWarmth / ±@PaletteService.MaxDepth / ±@PaletteService.MaxClarity)</td><td class="text-center">@Pts(s.WarmthRaw)</td><td class="text-center">@Pts(s.DepthRaw)</td><td class="text-center">@Pts(s.ClarityRaw)</td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </details>
+        }
+
+        <h3 class="h6 mt-2">Suas cores ideais</h3>
+        <ul class="pal-swatches mb-3">
+            @foreach (var c in p.Swatches)
+            {
+                <li class="pal-swatch" style="background:@c.Hex;color:@PaletteService.TextOn(c.Hex)"><span>@c.Name</span><small>@c.Hex</small></li>
+            }
+        </ul>
+
+        <div class="row g-3">
+            <div class="col-md-6">
+                <h3 class="h6">💖 Use bastante (cores do app)</h3>
+                <ul class="pal-chips">
+                    @foreach (var k in p.Best)
+                    {
+                        var c = ColorPalette.Get(k);
+                        <li class="pal-chip pal-chip-good"><span class="color-dot" style="background:@c.Hex"></span> @c.Name</li>
+                    }
+                </ul>
+            </div>
+            <div class="col-md-6">
+                <h3 class="h6">🙈 Longe do rosto</h3>
+                <ul class="pal-chips">
+                    @foreach (var k in p.Avoid)
+                    {
+                        var c = ColorPalette.Get(k);
+                        <li class="pal-chip pal-chip-avoid"><span class="color-dot" style="background:@c.Hex"></span> @c.Name</li>
+                    }
+                </ul>
+            </div>
+            <div class="col-md-6">
+                <h3 class="h6">🤍 Neutros que funcionam</h3>
+                <ul class="pal-neutrals">
+                    @foreach (var c in p.Neutrals)
+                    {
+                        <li><span class="pal-neutral-dot" style="background:@c.Hex"></span>@c.Name</li>
+                    }
+                </ul>
+            </div>
+            <div class="col-md-6">
+                <dl class="pal-tips mb-0">
+                    <dt>💍 Metal</dt><dd>@p.Metal</dd>
+                    <dt>💄 Maquiagem</dt><dd>@p.Makeup</dd>
+                    <dt>💇 Cabelo</dt><dd>@p.HairTip</dd>
+                </dl>
+            </div>
+        </div>
+        <div class="d-flex flex-wrap gap-2 mt-3">
+            <a href="#quiz" class="btn btn-outline-secondary btn-sm">Refazer o teste</a>
+            <a href="#provador-cores" class="btn btn-outline-secondary btn-sm">Testar as cores no rosto</a>
+        </div>
+    </section>
+
+    @if (Model.Clothes is { } w)
+    {
+        <section class="card p-4 mb-4" aria-labelledby="pal-matches">
+            <h2 id="pal-matches" class="h5">🌷 Suas roupas que já são da sua paleta <span class="text-muted fs-6">(@w.Matches.Count)</span></h2>
+            @if (w.Matches.Count == 0)
+            {
+                <p class="text-muted mb-0">Nenhuma peça ainda na sua paleta. Na próxima compra, procure por @string.Join(", ", p.Best.Take(4).Select(k => ColorPalette.Get(k).Name.ToLowerInvariant())).</p>
+            }
+            else
+            {
+                <p class="small text-muted">Essas são ótimas para usar perto do rosto: blusas, vestidos, casacos e lenços.</p>
+                <div class="pal-grid">
+                    @foreach (var i in w.Matches)
+                    {
+                        <a class="pal-item wardrobe-card" asp-page="/Wardrobe/Edit" asp-route-id="@i.Id">
+                            <partial name="_ItemThumb" model="i" />
+                            <span class="pal-item-name">@i.Name</span>
+                        </a>
+                    }
+                </div>
+            }
+        </section>
+
+        <section class="card p-4 mb-4" aria-labelledby="pal-watch">
+            <h2 id="pal-watch" class="h5">👀 Fique de olho <span class="text-muted fs-6">(@w.Watch.Count)</span></h2>
+            @if (w.Watch.Count == 0)
+            {
+                <p class="text-muted mb-0">Nada para se preocupar: nenhuma peça nas cores a evitar.</p>
+            }
+            else
+            {
+                <p class="small text-muted">Não precisa doar nada! Essas cores só não são as melhores perto do rosto. Use em calças, saias e sapatos, ou quebre com um acessório da sua paleta.</p>
+                <div class="pal-grid">
+                    @foreach (var i in w.Watch)
+                    {
+                        <a class="pal-item wardrobe-card" asp-page="/Wardrobe/Edit" asp-route-id="@i.Id">
+                            <partial name="_ItemThumb" model="i" />
+                            <span class="pal-item-name">@i.Name</span>
+                            <span class="pal-item-tip">@PaletteService.WatchTip(i)</span>
+                        </a>
+                    }
+                </div>
+            }
+        </section>
+    }
+}
+
+<section id="provador-cores" class="card p-4 mb-4" aria-labelledby="pal-drape-title"
+         data-drape data-season='@(drapeSeason == null ? "null" : JsonSerializer.Serialize(drapeSeason))'>
+    <h2 id="pal-drape-title" class="h5">🪞 Teste do tecido no rosto</h2>
+    <p class="small text-muted">Consultoras seguram tecidos coloridos perto do rosto. Aqui a borda faz esse papel: compare os dois lados e veja qual deixa a pele mais uniforme, os olhos mais brilhantes e as olheiras mais leves.</p>
+    <div class="pal-drape-empty alert alert-light" @(Model.FacePhoto != null ? "hidden" : null)>
+        Escolha uma foto do rosto em “Ajuda da foto” logo abaixo (ou cadastre uma em <a asp-page="/Settings">Configurações</a>) para fazer o teste.
+    </div>
+    <div class="pal-drape" @(Model.FacePhoto == null ? "hidden" : null)>
+        <div class="pal-drape-modes" role="group" aria-label="Comparação">
+            <button type="button" class="btn btn-sm btn-outline-secondary" data-mode="metal" aria-pressed="true">Dourado × Prateado</button>
+            <button type="button" class="btn btn-sm btn-outline-secondary" data-mode="temp" aria-pressed="false">Quente × Frio</button>
+            <button type="button" class="btn btn-sm btn-outline-secondary" data-mode="chroma" aria-pressed="false">Vivo × Suave</button>
+            <button type="button" class="btn btn-sm btn-outline-secondary" data-mode="value" aria-pressed="false">Claro × Escuro</button>
+            @if (p != null)
+            {
+                <button type="button" class="btn btn-sm btn-outline-secondary" data-mode="season" aria-pressed="false">Minha paleta × Evitar</button>
+            }
+        </div>
+        <div class="pal-drape-pair">
+            <figure class="pal-drape-fig">
+                <div class="pal-ring" data-ring="a"><img class="pal-face" alt="Seu rosto com a cor da esquerda em volta" src="@(Model.FacePhoto == null ? null : "/uploads/" + Model.FacePhoto)" /></div>
+                <figcaption data-caption="a">Dourado</figcaption>
+            </figure>
+            <figure class="pal-drape-fig">
+                <div class="pal-ring" data-ring="b"><img class="pal-face" alt="Seu rosto com a cor da direita em volta" src="@(Model.FacePhoto == null ? null : "/uploads/" + Model.FacePhoto)" /></div>
+                <figcaption data-caption="b">Prateado</figcaption>
+            </figure>
+        </div>
+        <div class="text-center mb-2">
+            <button type="button" class="btn btn-sm btn-link" data-next>Trocar para outro par de cores ↻</button>
+        </div>
+        <p class="small text-muted mb-1">Ou toque numa cor para vestir o lado esquerdo:</p>
+        <div class="pal-picker" role="group" aria-label="Cores para testar">
+            @foreach (var c in allSwatches)
+            {
+                <button type="button" class="pal-pick" style="background:@c.Hex" data-hex="@c.Hex" data-name="@c.Name" title="@c.Name" aria-label="Testar @c.Name"></button>
+            }
+        </div>
+    </div>
+</section>
+
+<section class="card p-4 mb-4" aria-labelledby="pal-photo-title">
+    <h2 id="pal-photo-title" class="h5">📷 Ajuda da foto <span class="badge rounded-pill pal-badge">opcional</span></h2>
+    <p class="small text-muted">Lemos a cor da pele na testa e nas bochechas e sugerimos o subtom e o tom de pele no teste. A análise roda no seu computador e a foto escolhida aqui não é guardada. Luz natural e rosto sem maquiagem dão o melhor resultado.</p>
+    <div class="row g-3 align-items-center">
+        <div class="col-md-7">
+            <form id="pal-analyze" method="post" asp-page-handler="Analyze" enctype="multipart/form-data">
+                <label class="form-label small" for="pal-photo">@(Model.FacePhoto != null ? "Testar com outra foto" : "Escolher uma foto do rosto")</label>
+                <input type="file" id="pal-photo" name="photo" accept="image/*" class="form-control" />
+            </form>
+        </div>
+        <div class="col-md-5">
+            <div id="pal-photo-result" class="pal-photo-result" aria-live="polite">
+                @if (Model.PhotoHint is { } h)
+                {
+                    <div class="d-flex align-items-center gap-2">
+                        <span class="pal-skin-dot" style="background:@h.Hex" aria-hidden="true"></span>
+                        <div class="small">
+                            <strong>Da sua foto do provador:</strong> subtom <strong>@h.UndertoneLabel</strong>, pele <strong>@h.DepthLabel</strong>.
+                            <span class="text-muted d-block">Lab @h.L.ToString(CultureInfo.InvariantCulture) / @h.A.ToString(CultureInfo.InvariantCulture) / @h.B.ToString(CultureInfo.InvariantCulture) · HSV @h.HsvH°, @h.HsvS%, @h.HsvV%</span>
+                        </div>
+                    </div>
+                }
+                else
+                {
+                    <span class="small text-muted">Nenhuma foto analisada ainda.</span>
+                }
+            </div>
+        </div>
+    </div>
+</section>
+
+<form id="quiz" method="post" asp-page-handler="Save" class="card p-4 mb-4 pal-quiz" aria-labelledby="pal-quiz-title">
+    <h2 id="pal-quiz-title" class="h5">🌸 Teste de coloração</h2>
+    <p class="small text-muted">Responda pensando no seu natural: sem tintura, sem bronzeado e sem maquiagem. Na dúvida, escolha a opção do meio.</p>
+    @if (Model.Error != null)
+    {
+        <div class="alert alert-warning" role="alert">@Model.Error</div>
+    }
+    @{ string? group = null; int n = 0; }
+    @foreach (var q in PaletteService.Questions)
+    {
+        n++;
+        if (q.Group != group)
+        {
+            group = q.Group;
+            <h3 class="pal-group">@group</h3>
+        }
+        Model.Prefill.TryGetValue(q.Id, out var chosen);
+        var fromPhoto = Model.Score == null && Model.PhotoHint != null && (q.Id == "fundo" || q.Id == "pele");
+        <fieldset class="pal-q" data-q="@q.Id">
+            <legend class="pal-q-title">
+                <span class="pal-q-n">@n</span> @q.Title
+                <span class="badge rounded-pill pal-badge pal-photo-badge" @(fromPhoto ? null : "hidden")>sugerido pela foto</span>
+            </legend>
+            @if (q.Help != null) { <p class="pal-q-help">@q.Help</p> }
+            <div class="pal-options">
+                @foreach (var o in q.Options)
+                {
+                    var id = $"q_{q.Id}_{o.Value}";
+                    <label class="pal-option" for="@id">
+                        <input type="radio" class="visually-hidden" id="@id" name="q_@q.Id" value="@o.Value" checked="@(chosen == o.Value)" required />
+                        <span class="pal-visual" aria-hidden="true">
+                            @foreach (var hex in o.Visual)
+                            {
+                                <span class="@(q.Id == "metal" ? "pal-metal" : "pal-blob")" style="--c:@hex"></span>
+                            }
+                        </span>
+                        <span class="pal-option-label">@o.Label</span>
+                        @if (o.Hint != null) { <span class="pal-option-hint">@o.Hint</span> }
+                    </label>
+                }
+            </div>
+        </fieldset>
+    }
+    <button class="btn btn-accent btn-lg mt-2">Descobrir minha estação ✨</button>
+</form>
+
+<details class="card p-4 mb-4">
+    <summary class="h6 mb-0">Já sei minha estação</summary>
+    <form method="post" asp-page-handler="Choose" class="row g-2 align-items-end mt-2">
+        <div class="col-sm-8">
+            <label class="form-label small" for="pal-season-pick">Estação</label>
+            <select id="pal-season-pick" name="season" class="form-select">
+                @foreach (var fam in PaletteService.Seasons.GroupBy(x => x.Family))
+                {
+                    <optgroup label="@fam.Key">
+                        @foreach (var x in fam)
+                        {
+                            <option value="@x.Name" selected="@(x.Name == p?.Name)">@x.Emoji @x.Name</option>
+                        }
+                    </optgroup>
+                }
+            </select>
+        </div>
+        <div class="col-sm-4"><button class="btn btn-outline-secondary w-100">Salvar paleta</button></div>
+    </form>
+</details>
+</div>
+
+@section Scripts {
+    <script src="~/js/palette.js" asp-append-version="true"></script>
+}

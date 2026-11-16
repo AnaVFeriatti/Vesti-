@@ -1,0 +1,174 @@
+@page "{id:int?}"
+@model MontarLooks.Web.Pages.Wardrobe.EditModel
+@{
+    var isNew = Model.Item.Id == 0;
+    ViewData["Title"] = isNew ? "Nova peça" : Model.Item.Name;
+}
+
+<a asp-page="Index" class="small text-muted">← Guarda-roupa</a>
+<h1 class="h3 my-3">@(isNew ? "Nova peça" : Model.Item.NeedsReview ? "Completar peça" : "Editar peça")</h1>
+
+<div class="row g-4">
+    <div class="col-md-4">
+        <div class="card p-3">
+            <partial name="_ItemThumb" model="Model.Item" />
+            @if (!isNew)
+            {
+                <div class="small text-muted mt-3">
+                    Usada <strong>@Model.Wears</strong> vez(es)
+                    @if (Model.LastWorn is { } lw) { <span>· última em @lw.ToString("dd/MM/yyyy")</span> }
+                    @if (Model.Item.Price is { } p && Model.Wears > 0)
+                    {
+                        <div>Custo por uso: <strong>@((p / Model.Wears).ToString("C"))</strong></div>
+                    }
+                </div>
+            }
+        </div>
+    </div>
+    <div class="col-md-8">
+        <form method="post" enctype="multipart/form-data" class="card p-4">
+            <input type="hidden" asp-for="Item.Id" />
+            <div asp-validation-summary="ModelOnly" class="text-danger"></div>
+
+            <div class="mb-3">
+                <label asp-for="Item.Name" class="form-label"></label>
+                <input asp-for="Item.Name" class="form-control" placeholder="Ex.: Camiseta branca básica" />
+                <span asp-validation-for="Item.Name" class="text-danger small"></span>
+            </div>
+
+            <div class="row g-3 mb-3">
+                <div class="col-sm-6">
+                    <label asp-for="Item.Category" class="form-label"></label>
+                    <select asp-for="Item.Category" class="form-select" asp-items="Html.GetEnumSelectList<Category>()"></select>
+                </div>
+                <div class="col-sm-6">
+                    <label asp-for="Item.SubType" class="form-label"></label>
+                    <input asp-for="Item.SubType" class="form-control" list="subtypes" />
+                    <datalist id="subtypes">
+                        @foreach (var s in new[] { "camiseta", "regata", "polo", "camisa", "blusa", "cropped", "moletom", "suéter", "jeans", "alfaiataria", "chino", "jogger", "bermuda", "short", "saia", "vestido", "macacão", "jaqueta", "blazer", "casaco", "corta-vento", "tênis", "sapato", "bota", "sandália", "chinelo", "boné", "relógio", "bolsa", "cinto" })
+                        {
+                            <option value="@s"></option>
+                        }
+                    </datalist>
+                </div>
+            </div>
+
+            <div class="row g-3 mb-3">
+                <div class="col-sm-6">
+                    <label asp-for="Item.PrimaryColor" class="form-label"></label>
+                    <select asp-for="Item.PrimaryColor" class="form-select">
+                        @foreach (var c in ColorPalette.All)
+                        {
+                            <option value="@c.Key">@c.Name</option>
+                        }
+                    </select>
+                </div>
+                <div class="col-sm-6">
+                    <label asp-for="Item.SecondaryColor" class="form-label"></label>
+                    <select asp-for="Item.SecondaryColor" class="form-select">
+                        <option value="">Nenhuma</option>
+                        @foreach (var c in ColorPalette.All)
+                        {
+                            <option value="@c.Key">@c.Name</option>
+                        }
+                    </select>
+                </div>
+            </div>
+
+            <div class="row g-3 mb-3">
+                <div class="col-sm-4">
+                    <label asp-for="Item.Style" class="form-label"></label>
+                    <select asp-for="Item.Style" class="form-select" asp-items="Html.GetEnumSelectList<Style>()"></select>
+                </div>
+                <div class="col-sm-4">
+                    <label asp-for="Item.Warmth" class="form-label"></label>
+                    <input asp-for="Item.Warmth" type="range" min="1" max="5" class="form-range" oninput="wv.textContent=this.value" />
+                    <div class="small text-muted">🧊 fresca · <strong id="wv">@Model.Item.Warmth</strong> · quente 🔥</div>
+                </div>
+                <div class="col-sm-4">
+                    <label asp-for="Item.Formality" class="form-label"></label>
+                    <input asp-for="Item.Formality" type="range" min="1" max="5" class="form-range" oninput="fv.textContent=this.value" />
+                    <div class="small text-muted">🩴 despojada · <strong id="fv">@Model.Item.Formality</strong> · formal 👔</div>
+                </div>
+            </div>
+
+            <fieldset class="detail-box mb-3">
+                <legend class="h6">✿ Detalhes da peça <span class="small text-muted fw-normal">(opcional, deixa os looks mais certeiros)</span></legend>
+                <div class="row g-3">
+                    <div class="col-sm-6 col-lg-4">
+                        <label asp-for="Item.Sleeve" class="form-label"></label>
+                        <select asp-for="Item.Sleeve" class="form-select" asp-items="Html.GetEnumSelectList<SleeveType>()"><option value="">Não se aplica</option></select>
+                    </div>
+                    <div class="col-sm-6 col-lg-4">
+                        <label asp-for="Item.Neckline" class="form-label"></label>
+                        <select asp-for="Item.Neckline" class="form-select" asp-items="Html.GetEnumSelectList<Neckline>()"><option value="">Não se aplica</option></select>
+                    </div>
+                    <div class="col-sm-6 col-lg-4">
+                        <label asp-for="Item.Length" class="form-label"></label>
+                        <select asp-for="Item.Length" class="form-select" asp-items="Html.GetEnumSelectList<GarmentLength>()"><option value="">Não se aplica</option></select>
+                    </div>
+                    <div class="col-sm-6 col-lg-4">
+                        <label asp-for="Item.Fit" class="form-label"></label>
+                        <select asp-for="Item.Fit" class="form-select" asp-items="Html.GetEnumSelectList<Fit>()"><option value="">Não se aplica</option></select>
+                    </div>
+                    <div class="col-sm-6 col-lg-4">
+                        <label asp-for="Item.Pattern" class="form-label"></label>
+                        <select asp-for="Item.Pattern" class="form-select" asp-items="Html.GetEnumSelectList<Pattern>()"><option value="">Não informado</option></select>
+                    </div>
+                    <div class="col-sm-6 col-lg-4">
+                        <label asp-for="Item.Fabric" class="form-label"></label>
+                        <select asp-for="Item.Fabric" class="form-select" asp-items="Html.GetEnumSelectList<Fabric>()"><option value="">Não informado</option></select>
+                    </div>
+                    <div class="col-sm-6 col-lg-4">
+                        <label asp-for="Item.Rise" class="form-label"></label>
+                        <select asp-for="Item.Rise" class="form-select" asp-items="Html.GetEnumSelectList<WaistRise>()"><option value="">Não se aplica</option></select>
+                    </div>
+                </div>
+            </fieldset>
+
+            <div class="row g-3 mb-3">
+                <div class="col-sm-6">
+                    <label asp-for="Item.Price" class="form-label"></label>
+                    @* Rendered by hand (no client-side number rule) so "59,90" is accepted; the server parses it as pt-BR. *@
+                    <input id="Item_Price" name="Item.Price" type="text" inputmode="decimal" class="form-control"
+                           value="@Model.Item.Price?.ToString("0.##")" placeholder="Opcional, para o custo por uso" />
+                    <span asp-validation-for="Item.Price" class="text-danger small"></span>
+                </div>
+                <div class="col-sm-6">
+                    <label asp-for="Photo" class="form-label">Foto</label>
+                    <input asp-for="Photo" type="file" accept="image/*" class="form-control" />
+                    <span asp-validation-for="Photo" class="text-danger small"></span>
+                </div>
+            </div>
+
+            <div class="mb-3">
+                <label asp-for="Item.Notes" class="form-label"></label>
+                <textarea asp-for="Item.Notes" class="form-control" rows="2"></textarea>
+            </div>
+
+            <div class="d-flex flex-wrap gap-4 mb-4">
+                <div class="form-check">
+                    <input asp-for="Item.RainFriendly" class="form-check-input" />
+                    <label asp-for="Item.RainFriendly" class="form-check-label"></label>
+                </div>
+                <div class="form-check">
+                    <input asp-for="Item.IsActive" class="form-check-input" />
+                    <label asp-for="Item.IsActive" class="form-check-label"></label>
+                </div>
+            </div>
+
+            <div class="d-flex justify-content-between">
+                <button class="btn btn-accent">Salvar</button>
+                @if (!isNew)
+                {
+                    <button class="btn btn-outline-danger" asp-page-handler="Delete" asp-route-id="@Model.Item.Id"
+                            formnovalidate onclick="return confirm('Excluir esta peça e tirá-la do histórico?')">Excluir</button>
+                }
+            </div>
+        </form>
+    </div>
+</div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+}

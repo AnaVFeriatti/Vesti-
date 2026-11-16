@@ -1,0 +1,16 @@
+bin/
+obj/
+data/
+*.user
+.vs/
+.idea/
+.vscode/
+TestResults/
+.env
+
+# fotos pessoais (roupas, rosto, corpo) ficam só no PC
+fotos/
+**/uploads/
+*.jpeg
+*.jpg
+!src/MontarLooks.Web/wwwroot/img/**

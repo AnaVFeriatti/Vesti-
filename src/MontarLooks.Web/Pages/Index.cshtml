@@ -1,0 +1,211 @@
+@page
+@model IndexModel
+@{
+    ViewData["Title"] = "Look do dia";
+    var w = Model.Weather;
+}
+
+<div class="row g-4">
+    <div class="col-lg-4">
+        <div class="card weather-card p-4 mb-3">
+            <div class="text-muted small mb-1">📍 @Model.City.Name · <a asp-page="/Settings" class="link-secondary">trocar cidade</a></div>
+            @if (w != null)
+            {
+                <div class="d-flex align-items-center gap-3">
+                    <div class="display-6">@w.Icon</div>
+                    <div>
+                        <div class="weather-temp">@w.TemperatureC.ToString("0")°C</div>
+                        <div class="text-muted">@w.Description · sensação @w.FeelsLikeC.ToString("0")°</div>
+                    </div>
+                </div>
+                <div class="small text-muted mt-2">
+                    Mín @w.MinC.ToString("0")° · Máx @w.MaxC.ToString("0")° · Chuva @w.RainChancePercent%
+                </div>
+            }
+            else
+            {
+                <div class="text-muted">Não consegui buscar o clima agora. Informe a temperatura abaixo.</div>
+            }
+        </div>
+
+        <form method="get" class="card p-4">
+            <label class="form-label fw-semibold" for="occasion">Aonde você vai hoje?</label>
+            <select id="occasion" name="occasion" class="form-select mb-3" asp-for="Occasion"
+                    asp-items="Html.GetEnumSelectList<Occasion>()" onchange="this.form.submit()"></select>
+
+            <details @(Model.Temp.HasValue || w == null ? "open" : "")>
+                <summary class="small text-muted mb-2">Ajustar temperatura / chuva</summary>
+                <div class="input-group mb-2">
+                    <input type="number" step="0.5" name="temp" class="form-control" value="@Model.Temp?.ToString(System.Globalization.CultureInfo.InvariantCulture)"
+                           placeholder="@Model.UsedTemperature.ToString("0.#")" />
+                    <span class="input-group-text">°C</span>
+                </div>
+                <div class="form-check mb-2">
+                    <input class="form-check-input" type="checkbox" name="rain" value="true" id="rain" @(Model.UsedRain ? "checked" : "") />
+                    <label class="form-check-label" for="rain">Vai chover</label>
+                </div>
+            </details>
+            <button class="btn btn-accent w-100">Montar looks</button>
+            <p class="small text-muted mt-3 mb-0">
+                Montando para <strong>@Model.UsedTemperature.ToString("0.#")°C</strong>
+                (sensação térmica, considerando a mínima do dia)@(Model.UsedRain ? ", com chuva" : "").
+            </p>
+        </form>
+    </div>
+
+    <div class="col-lg-8">
+        @if (Model.TodayOutfit != null)
+        {
+            <div class="alert alert-light border d-flex align-items-center gap-2">
+                ✅ Você já registrou um look hoje: <strong>@(Model.TodayOutfit.Title ?? "look do dia")</strong>
+                (@string.Join(", ", Model.TodayOutfit.Items.Select(i => i.ClothingItem.Name))).
+            </div>
+        }
+
+        @if (Model.ItemCount == 0)
+        {
+            <div class="card p-5 text-center">
+                <h2 class="h4">Seu guarda-roupa está vazio</h2>
+                <p class="text-muted">Cadastre suas peças para eu montar os looks, ou carregue um guarda-roupa de exemplo para testar.</p>
+                <div class="d-flex gap-2 justify-content-center">
+                    <a asp-page="/Wardrobe/Bulk" class="btn btn-accent">Enviar fotos das peças</a>
+                    <a asp-page="/Settings" class="btn btn-outline-secondary">Carregar exemplo</a>
+                </div>
+            </div>
+        }
+        else if (Model.Suggestions.Count == 0)
+        {
+            <div class="card p-4">
+                <p class="mb-0">Ainda não dá para montar um look: preciso de pelo menos uma parte de cima e uma de baixo (ou um vestido/macacão).
+                    <a asp-page="/Wardrobe/Edit">Cadastrar peça</a>.</p>
+            </div>
+        }
+        else
+        {
+            <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
+                <h1 class="h4 mb-0">Sugestões para @Model.Occasion.DisplayName().ToLowerInvariant()</h1>
+                <div class="d-flex gap-2">
+                    <button type="button" class="btn btn-outline-secondary btn-sm" id="rouletteBtn">🎰 Não sei o que vestir</button>
+                    <a class="btn btn-outline-secondary btn-sm"
+                       asp-page="/Index" asp-route-occasion="@Model.Occasion" asp-route-temp="@Model.Temp"
+                       asp-route-rain="@Model.Rain" asp-route-seed="@(Model.Seed + 1)">🔀 Outras sugestões</a>
+                </div>
+            </div>
+            @if (Model.DirtyCount > 0)
+            {
+                <p class="small text-muted">🧺 @Model.DirtyCount peça(s) na lavanderia ficaram de fora. <a asp-page="/Laundry">Ver lavanderia</a></p>
+            }
+            <div id="roulette" class="card p-4 mb-3 text-center d-none" aria-live="polite">
+                <div class="small text-muted mb-2">Girando a roleta do look…</div>
+                <div class="roulette-stage"><div id="rouletteSlot" class="look-items justify-content-center"></div></div>
+            </div>
+
+            @foreach (var s in Model.Suggestions)
+            {
+                var ids = s.Items.Select(i => i.Id).ToArray();
+                var liked = Model.LikedKeys.Contains(IndexModel.LookKey(ids));
+                <div class="card look-card p-4 mb-3" data-look>
+                    <div class="d-flex justify-content-between align-items-start mb-3 gap-2">
+                        <div>
+                            <div class="look-title">@s.Title</div>
+                            <span class="badge badge-harmony">@s.Harmony</span>
+                        </div>
+                        <form method="post" asp-page-handler="Wear" data-celebrate class="text-end">
+                            @foreach (var i in s.Items)
+                            {
+                                <input type="hidden" name="itemIds" value="@i.Id" />
+                            }
+                            <input type="hidden" name="occasion" value="@Model.Occasion" />
+                            <input type="hidden" name="temperature" value="@Model.UsedTemperature.ToString(System.Globalization.CultureInfo.InvariantCulture)" />
+                            <input type="hidden" name="weatherDescription" value="@w?.Description" />
+                            <input type="hidden" name="title" value="@s.Title" />
+                            <button class="btn btn-accent btn-sm">Vou usar este</button>
+                            <div class="form-check small mt-1">
+                                <input class="form-check-input" type="checkbox" name="sendToLaundry" value="true" id="laundry-@s.GetHashCode()" />
+                                <label class="form-check-label" for="laundry-@s.GetHashCode()">mandar a blusa pra lavar depois</label>
+                            </div>
+                        </form>
+                    </div>
+                    <div class="look-grid">
+                        <partial name="_Mannequin" model="@(new MannequinView(s.Items, Model.Prefs, Compact: true))" />
+                        <div>
+                    <div class="look-items mb-3">
+                        @foreach (var i in s.Items)
+                        {
+                            <a class="look-item text-decoration-none" asp-page="/Wardrobe/Edit" asp-route-id="@i.Id">
+                                <partial name="_ItemThumb" model="i" />
+                                <div class="mt-1">@i.Name</div>
+                            </a>
+                        }
+                    </div>
+                    @if (s.Reasons.Count > 0)
+                    {
+                        <ul class="reasons mb-0 ps-3">
+                            @foreach (var r in s.Reasons)
+                            {
+                                <li>@r</li>
+                            }
+                        </ul>
+                    }
+                    <form method="post" asp-page-handler="Feedback" class="feedback-btns d-flex gap-2 mt-3" data-feedback>
+                        @foreach (var id in ids) { <input type="hidden" name="itemIds" value="@id" /> }
+                        <button type="submit" name="liked" value="true" class="btn btn-sm btn-outline-secondary btn-like @(liked ? "is-on" : "")" aria-pressed="@(liked ? "true" : "false")">💖 Amei</button>
+                        <button type="submit" name="liked" value="false" class="btn btn-sm btn-outline-secondary btn-nope">🙅‍♀️ Nunca mais</button>
+                        <span class="small text-muted align-self-center" data-feedback-msg></span>
+                    </form>
+                        </div>
+                    </div>
+                </div>
+            }
+        }
+    </div>
+</div>
+
+@section Scripts {
+<script>
+(() => {
+    // Like / never again without reloading.
+    document.querySelectorAll("form[data-feedback]").forEach(f => {
+        let liked = null;
+        f.querySelectorAll("button[name=liked]").forEach(b => b.addEventListener("click", () => liked = b.value));
+        f.addEventListener("submit", async e => {
+            e.preventDefault();
+            const data = new FormData(f); data.set("liked", liked ?? "true");
+            const r = await fetch(f.action, { method: "POST", body: data });
+            if (!r.ok) return;
+            const j = await r.json();
+            f.querySelector("[data-feedback-msg]").textContent = j.message;
+            const card = f.closest("[data-look]");
+            if (liked === "true") { f.querySelector(".btn-like").classList.add("is-on"); window.petals && petals(14); }
+            else { card.style.transition = "opacity .5s, transform .5s"; card.style.opacity = ".35"; card.style.transform = "scale(.98)"; }
+        });
+    });
+
+    // Roulette: spins through the pieces and lands on one of the suggestions.
+    const btn = document.getElementById("rouletteBtn");
+    if (!btn) return;
+    btn.addEventListener("click", () => {
+        const looks = [...document.querySelectorAll("[data-look]")];
+        if (!looks.length) return;
+        const thumbs = looks.flatMap(l => [...l.querySelectorAll(".look-item")]);
+        const box = document.getElementById("roulette"), slot = document.getElementById("rouletteSlot");
+        box.classList.remove("d-none"); box.scrollIntoView({ behavior: "smooth", block: "center" });
+        const pick = looks[Math.floor(Math.random() * looks.length)];
+        let n = 0, delay = 60;
+        const reduce = matchMedia("(prefers-reduced-motion: reduce)").matches;
+        const step = () => {
+            slot.innerHTML = "";
+            slot.appendChild(thumbs[Math.floor(Math.random() * thumbs.length)].cloneNode(true));
+            n++; delay *= 1.12;
+            if (!reduce && n < 22) return setTimeout(step, delay);
+            slot.innerHTML = "";
+            pick.querySelectorAll(".look-item").forEach(t => slot.appendChild(t.cloneNode(true)));
+            box.querySelector(".small").textContent = "Hoje é este! 🎉 " + (pick.querySelector(".look-title")?.textContent ?? "");
+            window.petals && petals(30);
+            setTimeout(() => { pick.scrollIntoView({ behavior: "smooth", block: "center" }); pick.classList.add("look-picked"); }, 900);
+        };
+        step();
+    });
+})();
+</script>
+}

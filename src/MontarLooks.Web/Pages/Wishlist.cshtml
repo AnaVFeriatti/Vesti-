@@ -1,0 +1,173 @@
+@page
+@model WishlistModel
+@{
+    ViewData["Title"] = "Lista de desejos";
+    var total = Model.Wishes.Sum(w => w.Wish.Price ?? 0);
+    string Looks(int n) => n == 1 ? "1 look novo" : $"{n} looks novos";
+}
+<link rel="stylesheet" href="~/css/insights.css" asp-append-version="true" />
+
+<div class="insights-head mb-4">
+    <h1 class="h3 mb-1">Lista de desejos</h1>
+    <p class="text-muted mb-0">Antes de comprar, veja quantos looks a peça criaria com o que você já tem.</p>
+</div>
+
+@if (Model.BoughtName is { } bought)
+{
+    <div class="alert alert-success" role="status">
+        🎉 Oba, "@bought" é sua! Agora <a class="alert-link" asp-page="/Wardrobe/Edit">cadastre a peça no guarda-roupa</a>
+        (com foto, se puder) para ela entrar nas sugestões.
+    </div>
+}
+
+<div class="row g-4">
+    <div class="col-lg-4">
+        <form method="post" asp-page-handler="Save" class="card p-3 wish-form" id="wish-form">
+            <h2 class="h5">@(Model.Editing ? "✏️ Editar desejo" : "✨ Novo desejo")</h2>
+            <div asp-validation-summary="ModelOnly" class="text-danger small"></div>
+            <input type="hidden" asp-for="Wish.Id" />
+            <div class="mb-2">
+                <label asp-for="Wish.Name" class="form-label"></label>
+                <input asp-for="Wish.Name" class="form-control" placeholder="Ex.: Calça pantalona bege" />
+                <span asp-validation-for="Wish.Name" class="text-danger small"></span>
+            </div>
+            <div class="row g-2 mb-2">
+                <div class="col-6">
+                    <label asp-for="Wish.Category" class="form-label"></label>
+                    <select asp-for="Wish.Category" class="form-select" asp-items="Html.GetEnumSelectList<Category>()"></select>
+                </div>
+                <div class="col-6">
+                    <label asp-for="Wish.SubType" class="form-label">Tipo</label>
+                    <input asp-for="Wish.SubType" class="form-control" placeholder="calça, tênis..." />
+                </div>
+            </div>
+            <div class="row g-2 mb-2">
+                <div class="col-6">
+                    <label asp-for="Wish.PrimaryColor" class="form-label"></label>
+                    <select asp-for="Wish.PrimaryColor" class="form-select">
+                        @foreach (var c in ColorPalette.All)
+                        {
+                            <option value="@c.Key">@c.Name</option>
+                        }
+                    </select>
+                    <span asp-validation-for="Wish.PrimaryColor" class="text-danger small"></span>
+                </div>
+                <div class="col-6">
+                    <label asp-for="Wish.Style" class="form-label"></label>
+                    <select asp-for="Wish.Style" class="form-select" asp-items="Html.GetEnumSelectList<Style>()"></select>
+                </div>
+            </div>
+            <div class="row g-2 mb-2">
+                <div class="col-6">
+                    <label asp-for="Wish.Warmth" class="form-label">Esquenta</label>
+                    <input asp-for="Wish.Warmth" type="range" min="1" max="5" class="form-range" oninput="wwv.textContent=this.value" />
+                    <div class="small text-muted">🧊 <strong id="wwv">@Model.Wish.Warmth</strong> 🔥</div>
+                </div>
+                <div class="col-6">
+                    <label asp-for="Wish.Formality" class="form-label">Formalidade</label>
+                    <input asp-for="Wish.Formality" type="range" min="1" max="5" class="form-range" oninput="wfv.textContent=this.value" />
+                    <div class="small text-muted">👟 <strong id="wfv">@Model.Wish.Formality</strong> 👠</div>
+                </div>
+            </div>
+            <div class="mb-2">
+                <label asp-for="Wish.Price" class="form-label"></label>
+                <input asp-for="Wish.Price" type="text" inputmode="decimal" class="form-control" placeholder="Ex.: 189,90" />
+                <span asp-validation-for="Wish.Price" class="text-danger small"></span>
+            </div>
+            <div class="mb-2">
+                <label asp-for="Wish.Link" class="form-label"></label>
+                <input asp-for="Wish.Link" type="url" class="form-control" placeholder="https://..." />
+                <span asp-validation-for="Wish.Link" class="text-danger small"></span>
+            </div>
+            <div class="mb-3">
+                <label asp-for="Wish.Note" class="form-label"></label>
+                <textarea asp-for="Wish.Note" class="form-control" rows="2" placeholder="Tamanho, loja, promoção..."></textarea>
+            </div>
+            <div class="d-flex gap-2">
+                <button class="btn btn-accent flex-grow-1">@(Model.Editing ? "Salvar alterações" : "Adicionar à lista")</button>
+                @if (Model.Editing) { <a asp-page="/Wishlist" class="btn btn-outline-secondary">Cancelar</a> }
+            </div>
+        </form>
+    </div>
+
+    <div class="col-lg-8">
+        @if (Model.Wishes.Count == 0)
+        {
+            <div class="card p-4 text-center">
+                <div class="empty-emoji" aria-hidden="true">🛍️</div>
+                <p class="mb-1 fw-semibold">Sua lista está vazia.</p>
+                <p class="text-muted small mb-0">Anote aqui a peça dos sonhos e descubra se ela combina com o seu armário. Precisa de ideias? Veja as <a asp-page="/Capsule">lacunas do guarda-roupa</a>.</p>
+            </div>
+        }
+        else
+        {
+            <p class="small text-muted">@Model.Wishes.Count desejo(s)@(total > 0 ? $" · total de {total:C}" : "")</p>
+        }
+        <div class="d-flex flex-column gap-3">
+            @foreach (var e in Model.Wishes)
+            {
+                var w = e.Wish;
+                var c = ColorPalette.Get(w.PrimaryColor);
+                <article class="card p-3 wish-card">
+                    <div class="row g-3">
+                        <div class="col-sm-8">
+                            <div class="d-flex justify-content-between align-items-start gap-2">
+                                <div>
+                                    <h3 class="h5 mb-1">@w.Name</h3>
+                                    <div class="small text-muted">
+                                        <span class="color-dot" style="background:@c.Hex"></span> @c.Name
+                                        · @w.Category.DisplayName()@(string.IsNullOrWhiteSpace(w.SubType) ? "" : $" ({w.SubType})")
+                                        · @w.Style.DisplayName()
+                                        @if (w.Price is { } p) { <span>· <strong>@p.ToString("C")</strong></span> }
+                                    </div>
+                                </div>
+                                <div class="wish-score @(e.Impact.NewLooks == 0 ? "wish-score-zero" : "")">
+                                    <span class="wish-score-num">@e.Impact.NewLooks</span>
+                                    <span class="wish-score-lbl">@(e.Impact.NewLooks == 1 ? "look" : "looks")</span>
+                                </div>
+                            </div>
+                            @if (!string.IsNullOrWhiteSpace(w.Note)) { <p class="small mt-2 mb-1">📝 @w.Note</p> }
+                            @if (WishlistModel.IsHttp(w.Link)) { <a href="@w.Link" target="_blank" rel="noopener noreferrer nofollow" class="small">🔗 ver na loja</a> }
+
+                            @if (e.Impact.NewLooks == 0)
+                            {
+                                <p class="small text-muted mt-2 mb-2">Hmm, ela ainda não combina com nada do seu guarda-roupa. Pense duas vezes antes de comprar. 💭</p>
+                            }
+                            else
+                            {
+                                <p class="small mt-2 mb-2">Criaria <strong>@Looks(e.Impact.NewLooks)</strong> com as suas roupas.@(w.Price is { } pp && e.Impact.NewLooks > 0 ? $" Dá {(pp / e.Impact.NewLooks):C} por look possível." : "")</p>
+                                <div class="small fw-semibold mb-1">Combina mais com:</div>
+                                <div class="look-items">
+                                    @foreach (var part in e.Impact.TopPartners)
+                                    {
+                                        <a class="look-item wardrobe-card" asp-page="/Wardrobe/Edit" asp-route-id="@part.Item.Id">
+                                            <partial name="_ItemThumb" model="part.Item" />
+                                            <div class="text-truncate">@part.Item.Name</div>
+                                        </a>
+                                    }
+                                </div>
+                            }
+                            <div class="d-flex flex-wrap gap-2 mt-3">
+                                <form method="post" asp-page-handler="Bought" asp-route-id="@w.Id">
+                                    <button class="btn btn-accent btn-sm">🛍️ Comprei!</button>
+                                </form>
+                                <a asp-page="/Wishlist" asp-route-edit="@w.Id" class="btn btn-outline-secondary btn-sm">Editar</a>
+                                <form method="post" asp-page-handler="Delete" asp-route-id="@w.Id" onsubmit="return confirm('Tirar este desejo da lista?')">
+                                    <button class="btn btn-outline-danger btn-sm">Remover</button>
+                                </form>
+                            </div>
+                        </div>
+                        <div class="col-sm-4">
+                            @if (e.Impact.BestLook is { } look)
+                            {
+                                <div class="small text-muted text-center mb-1">Melhor look com ela</div>
+                                <partial name="_Mannequin" model="new MannequinView(look, Model.Prefs, Compact: true)" />
+                            }
+                        </div>
+                    </div>
+                </article>
+            }
+        </div>
+    </div>
+</div>
+

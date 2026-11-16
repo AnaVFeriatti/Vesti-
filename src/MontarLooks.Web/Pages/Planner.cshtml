@@ -1,0 +1,203 @@
+@page
+@model PlannerModel
+@using System.Globalization
+@{
+    ViewData["Title"] = "Semana";
+    var inv = CultureInfo.InvariantCulture;
+    var occasions = Enum.GetValues<Occasion>();
+    var first = Model.Days.First().Plan.Date;
+    var last = Model.Days.Last().Plan.Date;
+    var hintsJson = System.Text.Json.JsonSerializer.Serialize(
+        PlannerService.Hints.Select(h => new { w = h.Words, o = (int)h.Occasion }));
+    var hasLooks = Model.Days.Any(d => d.Items.Count > 0);
+}
+<link rel="stylesheet" href="~/css/planner.css" asp-append-version="true" />
+
+<div class="d-flex flex-wrap justify-content-between align-items-end gap-3 mb-3">
+    <div>
+        <h1 class="h3 mb-1 planner-title">Planejador da semana</h1>
+        <div class="text-muted small">
+            @first.ToString("dd/MM") a @last.ToString("dd/MM") · 📍 @Model.City.Name ·
+            <a asp-page="/Settings" class="link-secondary">trocar cidade</a>
+        </div>
+    </div>
+    <div class="d-flex flex-wrap gap-2" role="group" aria-label="Qual semana">
+        <a class="btn btn-sm btn-outline-secondary @(!Model.Next ? "active" : "")" asp-page="/Planner" asp-route-weekend="@Model.Weekend" asp-route-next="false">Esta semana</a>
+        <a class="btn btn-sm btn-outline-secondary @(Model.Next ? "active" : "")" asp-page="/Planner" asp-route-weekend="@Model.Weekend" asp-route-next="true">Próxima semana</a>
+        <a class="btn btn-sm btn-outline-secondary @(Model.Weekend ? "active" : "")" asp-page="/Planner" asp-route-weekend="@(!Model.Weekend)" asp-route-next="@Model.Next">
+            @(Model.Weekend ? "✓ Com fim de semana" : "+ Incluir fim de semana")
+        </a>
+    </div>
+</div>
+
+@if (!Model.HasForecast)
+{
+    <div class="alert alert-warning">Não consegui buscar a previsão agora. Vou montar os looks para uns 24°C, sem chuva.</div>
+}
+@if (Model.CleanCount == 0)
+{
+    <div class="alert alert-warning">
+        Não há peças limpas e revisadas no guarda-roupa. <a asp-page="/Wardrobe/Index">Ver guarda-roupa</a>.
+    </div>
+}
+
+<form method="post" id="planner-form">
+    <input type="hidden" name="Weekend" value="@Model.Weekend.ToString().ToLowerInvariant()" />
+    <input type="hidden" name="Next" value="@Model.Next.ToString().ToLowerInvariant()" />
+
+    <div class="card p-3 mb-3 planner-toolbar">
+        <div class="d-flex flex-wrap align-items-center gap-2">
+            <button class="btn btn-accent" asp-page-handler="Build">✨ Montar semana</button>
+            <button class="btn btn-outline-secondary" asp-page-handler="Save">Salvar agenda</button>
+            <span class="small text-muted ms-md-2">
+                Escreva a agenda de cada dia (ex.: “reunião com cliente”, “academia”, “jantar”) e eu escolho a ocasião.
+                Sem repetir peça principal na semana e sem peças na lavanderia.
+            </span>
+        </div>
+    </div>
+
+    <div class="planner-grid">
+        @for (var i = 0; i < Model.Days.Count; i++)
+        {
+            var d = Model.Days[i];
+            var p = d.Plan;
+            var f = d.Forecast;
+            var isToday = p.Date == Model.Today;
+            var past = p.Date < Model.Today;
+            <section class="card look-card planner-day @(p.Locked ? "is-locked" : "") @(isToday ? "is-today" : "") @(past ? "is-past" : "")"
+                     id="dia-@p.Date.ToString("yyyy-MM-dd")" aria-labelledby="t-@i">
+                <input type="hidden" name="Form[@i].Date" value="@p.Date.ToString("yyyy-MM-dd")" />
+                <input type="hidden" name="Form[@i].AutoValue" value="@((int)d.Occasion)" class="js-auto" />
+                <input type="hidden" name="Form[@i].Chosen" value="@((!d.OccasionIsAuto).ToString().ToLowerInvariant())" class="js-chosen" />
+
+                <div class="d-flex justify-content-between align-items-start gap-2 mb-2">
+                    <div>
+                        <h2 class="h6 mb-0 planner-dayname" id="t-@i">
+                            @PlannerModel.DayName(p.Date)
+                            @if (isToday) { <span class="badge planner-today">hoje</span> }
+                        </h2>
+                        <div class="small text-muted">@p.Date.ToString("dd/MM")</div>
+                    </div>
+                    <div class="planner-weather text-end" title="@(f?.Description ?? "Sem previsão")">
+                        @if (f != null)
+                        {
+                            <span class="planner-wicon" aria-hidden="true">@f.Icon</span>
+                            <div class="small">
+                                <span class="visually-hidden">@f.Description. </span>
+                                <strong>@f.MaxC.ToString("0")°</strong> / @f.MinC.ToString("0")°
+                            </div>
+                            <div class="small text-muted">💧 @f.RainChancePercent%</div>
+                        }
+                        else
+                        {
+                            <span class="small text-muted">sem previsão</span>
+                        }
+                    </div>
+                </div>
+
+                <label class="form-label small mb-1" for="ag-@i">Agenda</label>
+                <input id="ag-@i" name="Form[@i].Agenda" value="@p.Agenda" maxlength="200" class="form-control form-control-sm mb-2 js-agenda"
+                       placeholder="reunião, academia, festa..." autocomplete="off" />
+
+                <label class="form-label small mb-1" for="oc-@i">Ocasião</label>
+                <select id="oc-@i" name="Form[@i].Occasion" class="form-select form-select-sm mb-1 js-occasion">
+                    @foreach (var o in occasions)
+                    {
+                        <option value="@((int)o)" selected="@(o == d.Occasion)">@o.DisplayName()</option>
+                    }
+                </select>
+                <div class="small text-muted mb-3 js-auto-note" @(d.OccasionIsAuto ? "" : "hidden")>escolhida automaticamente</div>
+
+                @if (d.Items.Count > 0)
+                {
+                    <div class="planner-look mb-2">
+                        <partial name="_Mannequin" model="new MannequinView(d.Items, Model.Prefs, Compact: true)" />
+                        <div class="look-items planner-items">
+                            @foreach (var it in d.Items)
+                            {
+                                <a class="look-item text-decoration-none @(Model.Repeated.Contains(it.Id) ? "planner-repeat" : "")"
+                                   asp-page="/Wardrobe/Edit" asp-route-id="@it.Id"
+                                   title="@(Model.Repeated.Contains(it.Id) ? "Repete na semana" : it.Name)">
+                                    <partial name="_ItemThumb" model="it" />
+                                    <div class="mt-1">@it.Name</div>
+                                </a>
+                            }
+                        </div>
+                    </div>
+                    @if (p.Title != null) { <div class="look-title small mb-1">@p.Title</div> }
+                    <div class="small text-muted mb-2">Montado para @d.DressingC.ToString("0.#")°C@(d.Rainy ? ", com chuva" : "").</div>
+                }
+                else
+                {
+                    <div class="planner-empty mb-3">Ainda sem look. Clique em <strong>Montar semana</strong>.</div>
+                }
+
+                <div class="d-flex flex-wrap gap-2 mt-auto">
+                    <button class="btn btn-sm btn-outline-secondary" asp-page-handler="Reroll" asp-route-date="@p.Date.ToString("yyyy-MM-dd")"
+                            disabled="@p.Locked" aria-label="Trocar o look de @PlannerModel.DayName(p.Date)">🔀 Trocar</button>
+                    <button class="btn btn-sm @(p.Locked ? "btn-accent" : "btn-outline-secondary")" asp-page-handler="Lock" asp-route-date="@p.Date.ToString("yyyy-MM-dd")"
+                            aria-pressed="@(p.Locked ? "true" : "false")">@(p.Locked ? "🔒 Travado" : "🔓 Travar")</button>
+                    @if (isToday && d.Items.Count > 0)
+                    {
+                        <button class="btn btn-sm btn-accent" form="wear-@i">Vou usar hoje</button>
+                    }
+                </div>
+            </section>
+        }
+    </div>
+</form>
+
+@* "Vou usar hoje" posts to the look-of-the-day page (forms cannot be nested). *@
+@for (var i = 0; i < Model.Days.Count; i++)
+{
+    var d = Model.Days[i];
+    if (d.Plan.Date != Model.Today || d.Items.Count == 0) { continue; }
+    <form method="post" asp-page="/Index" asp-page-handler="Wear" id="wear-@i" hidden>
+        @foreach (var it in d.Items)
+        {
+            <input type="hidden" name="itemIds" value="@it.Id" />
+        }
+        <input type="hidden" name="occasion" value="@d.Occasion" />
+        <input type="hidden" name="temperature" value="@d.DressingC.ToString(inv)" />
+        <input type="hidden" name="weatherDescription" value="@d.Forecast?.Description" />
+        <input type="hidden" name="title" value="@d.Plan.Title" />
+    </form>
+}
+
+@if (!hasLooks && Model.CleanCount > 0)
+{
+    <p class="small text-muted mt-3">Dica: trave os dias que ficaram perfeitos e use 🔀 nos outros, um por vez.</p>
+}
+
+<script>
+(() => {
+    // Agenda keyword hints: pre-select the occasion while the user hasn't picked one by hand.
+    const hints = @Html.Raw(hintsJson);
+    const norm = s => s.toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "");
+    const esc = s => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+    const guess = text => {
+        const t = norm(text || "");
+        if (!t.trim()) return null;
+        for (const h of hints)
+            if (h.w.some(w => new RegExp("\\b" + esc(w)).test(t))) return h.o;
+        return null;
+    };
+    document.querySelectorAll(".planner-day").forEach(card => {
+        const agenda = card.querySelector(".js-agenda");
+        const select = card.querySelector(".js-occasion");
+        const chosen = card.querySelector(".js-chosen");
+        const auto = card.querySelector(".js-auto");
+        const note = card.querySelector(".js-auto-note");
+        const weekday = card.id ? new Date(card.id.slice(4) + "T12:00:00").getDay() : 1;
+        const dayDefault = weekday === 0 || weekday === 6 ? "0" : "1"; // Casual / Trabalho
+        select.addEventListener("change", () => { chosen.value = "true"; note.hidden = true; });
+        agenda.addEventListener("input", () => {
+            if (chosen.value === "true") return;
+            const g = guess(agenda.value);
+            const v = g === null ? dayDefault : String(g);
+            select.value = v;
+            auto.value = v;
+        });
+    });
+})();
+</script>

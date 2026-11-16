@@ -1,0 +1,195 @@
+@page
+@model DashboardModel
+@using System.Text.Json
+@{
+    ViewData["Title"] = "Analytics";
+    var s = Model.Stats;
+    object Bars(IEnumerable<Slice> xs) => new { labels = xs.Select(x => x.Label), values = xs.Select(x => x.Value), colors = xs.Select(x => x.Color) };
+    var chartData = new
+    {
+        itemsByColor = Bars(s.ItemsByColor),
+        wearsByColor = Bars(s.WearsByColor),
+        byCategory = Bars(s.ItemsByCategory),
+        byOccasion = Bars(s.OutfitsByOccasion),
+        harmony = Bars(s.HarmonyMix),
+        perWeek = new { labels = s.OutfitsPerWeek.Select(p => p.Label), values = s.OutfitsPerWeek.Select(p => p.Value) },
+        tempPerWeek = new { labels = s.AvgTemperaturePerWeek.Select(p => p.Label), values = s.AvgTemperaturePerWeek.Select(p => double.IsNaN(p.Value) ? (double?)null : p.Value) }
+    };
+}
+
+<h1 class="h3 mb-4">Analytics do guarda-roupa</h1>
+
+@if (s.ActiveItems == 0)
+{
+    <div class="card p-4"><p class="mb-0">Cadastre peças (ou carregue o exemplo em <a asp-page="/Settings">Configurações</a>) para ver os números.</p></div>
+    return;
+}
+
+<div class="row g-3 mb-4">
+    <div class="col-6 col-md-3"><div class="card p-3"><div class="kpi">@s.ActiveItems</div><div class="kpi-label">peças ativas</div></div></div>
+    <div class="col-6 col-md-3"><div class="card p-3"><div class="kpi">@s.OutfitsLast30Days</div><div class="kpi-label">looks nos últimos 30 dias (@s.TotalOutfits no total)</div></div></div>
+    <div class="col-6 col-md-3"><div class="card p-3"><div class="kpi">@s.WardrobeUsedLast30DaysPct.ToString("0")%</div><div class="kpi-label">do guarda-roupa usado em 30 dias</div></div></div>
+    <div class="col-6 col-md-3"><div class="card p-3"><div class="kpi">@(s.AverageRating?.ToString("0.0") ?? "–")</div><div class="kpi-label">nota média dos looks</div></div></div>
+</div>
+
+<div class="row g-3 mb-4">
+    <div class="col-lg-8">
+        <div class="card p-3 h-100">
+            <h2 class="h6">Looks registrados por semana</h2>
+            <div class="chart-box"><canvas id="perWeek" aria-label="Looks por semana"></canvas></div>
+        </div>
+    </div>
+    <div class="col-lg-4">
+        <div class="card p-3 h-100">
+            <h2 class="h6">Temperatura média dos looks por semana (°C)</h2>
+            <div class="chart-box"><canvas id="tempPerWeek" aria-label="Temperatura média por semana"></canvas></div>
+        </div>
+    </div>
+</div>
+
+<div class="row g-3 mb-4">
+    <div class="col-md-6">
+        <div class="card p-3 h-100">
+            <h2 class="h6">Cores no guarda-roupa (peças)</h2>
+            <div class="chart-box"><canvas id="itemsByColor" aria-label="Peças por cor"></canvas></div>
+        </div>
+    </div>
+    <div class="col-md-6">
+        <div class="card p-3 h-100">
+            <h2 class="h6">Cores que você mais veste (usos)</h2>
+            <div class="chart-box"><canvas id="wearsByColor" aria-label="Usos por cor"></canvas></div>
+        </div>
+    </div>
+</div>
+
+<div class="row g-3 mb-4">
+    <div class="col-md-4">
+        <div class="card p-3 h-100"><h2 class="h6">Peças por categoria</h2><div class="chart-box"><canvas id="byCategory"></canvas></div></div>
+    </div>
+    <div class="col-md-4">
+        <div class="card p-3 h-100"><h2 class="h6">Looks por ocasião</h2><div class="chart-box"><canvas id="byOccasion"></canvas></div></div>
+    </div>
+    <div class="col-md-4">
+        <div class="card p-3 h-100"><h2 class="h6">Tipos de combinação de cor</h2><div class="chart-box"><canvas id="harmony"></canvas></div></div>
+    </div>
+</div>
+
+<div class="row g-3">
+    <div class="col-md-6">
+        <div class="card p-3 h-100">
+            <h2 class="h6">🔥 Mais usadas</h2>
+            <table class="table table-sm mb-0">
+                <thead><tr><th>Peça</th><th class="text-end">Usos</th><th class="text-end">Última vez</th></tr></thead>
+                <tbody>
+                @foreach (var u in s.MostWorn)
+                {
+                    <tr><td><a asp-page="/Wardrobe/Edit" asp-route-id="@u.Item.Id">@u.Item.Name</a></td><td class="text-end">@u.Wears</td><td class="text-end">@u.LastWorn?.ToString("dd/MM")</td></tr>
+                }
+                </tbody>
+            </table>
+        </div>
+    </div>
+    <div class="col-md-6">
+        <div class="card p-3 h-100">
+            <h2 class="h6">🧊 Esquecidas (30+ dias sem uso)</h2>
+            @if (s.Forgotten.Count == 0)
+            {
+                <p class="text-muted small mb-0">Nenhuma. Você está usando bem o guarda-roupa!</p>
+            }
+            else
+            {
+                <table class="table table-sm mb-0">
+                    <thead><tr><th>Peça</th><th class="text-end">Usos</th><th class="text-end">Última vez</th></tr></thead>
+                    <tbody>
+                    @foreach (var u in s.Forgotten)
+                    {
+                        <tr><td><a asp-page="/Wardrobe/Edit" asp-route-id="@u.Item.Id">@u.Item.Name</a></td><td class="text-end">@u.Wears</td><td class="text-end">@(u.LastWorn?.ToString("dd/MM") ?? "nunca")</td></tr>
+                    }
+                    </tbody>
+                </table>
+                <p class="small text-muted mt-2 mb-0">O gerador dá preferência a essas peças. Se continuarem paradas, talvez seja hora de doar.</p>
+            }
+        </div>
+    </div>
+    <div class="col-md-6">
+        <div class="card p-3 h-100">
+            <h2 class="h6">Menos usadas</h2>
+            <table class="table table-sm mb-0">
+                <thead><tr><th>Peça</th><th class="text-end">Usos</th></tr></thead>
+                <tbody>
+                @foreach (var u in s.LeastWorn)
+                {
+                    <tr><td><a asp-page="/Wardrobe/Edit" asp-route-id="@u.Item.Id">@u.Item.Name</a></td><td class="text-end">@u.Wears</td></tr>
+                }
+                </tbody>
+            </table>
+        </div>
+    </div>
+    <div class="col-md-6">
+        <div class="card p-3 h-100">
+            <h2 class="h6">💸 Maior custo por uso</h2>
+            @if (s.WorstCostPerWear.Count == 0)
+            {
+                <p class="text-muted small mb-0">Informe o preço das peças para ver o custo por uso.</p>
+            }
+            else
+            {
+                <table class="table table-sm mb-0">
+                    <thead><tr><th>Peça</th><th class="text-end">Preço</th><th class="text-end">Usos</th><th class="text-end">R$/uso</th></tr></thead>
+                    <tbody>
+                    @foreach (var u in s.WorstCostPerWear)
+                    {
+                        <tr><td><a asp-page="/Wardrobe/Edit" asp-route-id="@u.Item.Id">@u.Item.Name</a></td><td class="text-end">@u.Item.Price?.ToString("C")</td><td class="text-end">@u.Wears</td><td class="text-end">@u.CostPerWear?.ToString("C")</td></tr>
+                    }
+                    </tbody>
+                </table>
+            }
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <script src="~/lib/chartjs/chart.umd.min.js"></script>
+    <script>
+        const data = @Html.Raw(JsonSerializer.Serialize(chartData, new JsonSerializerOptions { PropertyNamingPolicy = JsonNamingPolicy.CamelCase }));
+        const SERIES = '#c2185b', GRID = '#f6dbe5', TEXT = '#76574c';
+        Chart.defaults.color = TEXT;
+        Chart.defaults.font.family = getComputedStyle(document.body).fontFamily;
+        Chart.defaults.plugins.legend.display = false;
+
+        const axes = (horizontal) => ({
+            x: { grid: { display: !horizontal ? false : true, color: GRID }, border: { display: false }, ticks: { precision: 0 } },
+            y: { grid: { display: horizontal ? false : true, color: GRID }, border: { display: false }, ticks: { precision: 0, autoSkip: !horizontal } }
+        });
+
+        function bar(id, d, { horizontal = true, useItemColors = false } = {}) {
+            const el = document.getElementById(id);
+            if (!el || d.labels.length === 0) { if (el) el.replaceWith(Object.assign(document.createElement('p'), { className: 'text-muted small', textContent: 'Sem dados ainda.' })); return; }
+            new Chart(el, {
+                type: 'bar',
+                data: { labels: d.labels, datasets: [{
+                    data: d.values,
+                    backgroundColor: useItemColors ? d.colors : SERIES,
+                    // Thin outline so white/beige bars stay visible on the white card.
+                    borderColor: useItemColors ? 'rgba(61,42,36,.22)' : SERIES,
+                    borderWidth: useItemColors ? 1 : 0,
+                    borderRadius: 4, borderSkipped: 'start', maxBarThickness: 22
+                }] },
+                options: { indexAxis: horizontal ? 'y' : 'x', maintainAspectRatio: false, scales: axes(horizontal) }
+            });
+        }
+
+        bar('perWeek', data.perWeek, { horizontal: false });
+        bar('itemsByColor', data.itemsByColor, { useItemColors: true });
+        bar('wearsByColor', data.wearsByColor, { useItemColors: true });
+        bar('byCategory', data.byCategory);
+        bar('byOccasion', data.byOccasion);
+        bar('harmony', data.harmony);
+
+        new Chart(document.getElementById('tempPerWeek'), {
+            type: 'line',
+            data: { labels: data.tempPerWeek.labels, datasets: [{ data: data.tempPerWeek.values, borderColor: SERIES, backgroundColor: SERIES, borderWidth: 2, pointRadius: 4, spanGaps: true, tension: .3 }] },
+            options: { maintainAspectRatio: false, interaction: { mode: 'index', intersect: false }, scales: { x: { grid: { display: false } }, y: { grid: { color: GRID }, border: { display: false } } } }
+        });
+    </script>
+}

@@ -1,0 +1,16 @@
+@model ClothingItem
+@{
+    var color = ColorPalette.Get(Model.PrimaryColor);
+}
+<div class="item-thumb" title="@Model.Name">
+    @if (!string.IsNullOrEmpty(Model.PhotoFileName))
+    {
+        <img src="/uploads/@Model.PhotoFileName" alt="@Model.Name" loading="lazy" />
+    }
+    else
+    {
+        <div class="item-swatch" style="background:@color.Hex">
+            <span>@(Model.SubType ?? Model.Category.DisplayName())</span>
+        </div>
+    }
+</div>

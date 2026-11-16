@@ -1,0 +1,174 @@
+using MontarLooks.Web.Models;
+using MontarLooks.Web.Services;
+
+namespace MontarLooks.Tests;
+
+public class OutfitGeneratorTests
+{
+    private static readonly DateOnly Today = new(2026, 11, 16);
+    private static int _id;
+
+    private static ClothingItem Item(string name, Category c, string color, Style s, int warmth, int formality, bool rain = false) =>
+        new() { Id = ++_id, Name = name, Category = c, PrimaryColor = color, Style = s, Warmth = warmth, Formality = formality, RainFriendly = rain };
+
+    private static List<ClothingItem> Wardrobe() =>
+    [
+        Item("Camiseta branca", Category.Top, "branco", Style.Casual, 1, 1),
+        Item("Camisa social", Category.Top, "branco", Style.Formal, 2, 5),
+        Item("Moletom", Category.Top, "cinza", Style.Casual, 4, 1),
+        Item("Regata dry", Category.Top, "azul", Style.Sporty, 1, 1),
+        Item("Jeans", Category.Bottom, "jeans", Style.Casual, 3, 2),
+        Item("Alfaiataria", Category.Bottom, "preto", Style.Formal, 3, 5),
+        Item("Bermuda", Category.Bottom, "bege", Style.Casual, 1, 1),
+        Item("Short treino", Category.Bottom, "preto", Style.Sporty, 1, 1),
+        Item("Blazer", Category.Outerwear, "marinho", Style.Formal, 3, 5),
+        Item("Jaqueta puffer", Category.Outerwear, "preto", Style.Casual, 5, 2),
+        Item("Tênis branco", Category.Shoes, "branco", Style.Casual, 2, 2),
+        Item("Sapato social", Category.Shoes, "preto", Style.Formal, 2, 5),
+        Item("Bota", Category.Shoes, "marrom", Style.SmartCasual, 3, 3, rain: true),
+    ];
+
+    private readonly OutfitGenerator _gen = new();
+
+    [Fact]
+    public void Formal_event_gets_formal_pieces()
+    {
+        var looks = _gen.Suggest(Wardrobe(), new Dictionary<int, DateOnly>(), new(Occasion.Formal, 22, false, Today));
+        Assert.NotEmpty(looks);
+        var best = looks[0];
+        Assert.Contains(best.Items, i => i.Name == "Alfaiataria");
+        Assert.Contains(best.Items, i => i.Name == "Sapato social");
+    }
+
+    [Fact]
+    public void Gym_uses_sporty_top_and_bottom()
+    {
+        var best = _gen.Suggest(Wardrobe(), new Dictionary<int, DateOnly>(), new(Occasion.Gym, 26, false, Today))[0];
+        Assert.All(best.Items.Where(i => i.Category is Category.Top or Category.Bottom), i => Assert.Equal(Style.Sporty, i.Style));
+    }
+
+    [Fact]
+    public void Cold_weather_requires_outerwear_and_hot_weather_skips_it()
+    {
+        var cold = _gen.Suggest(Wardrobe(), new Dictionary<int, DateOnly>(), new(Occasion.Casual, 8, false, Today));
+        Assert.All(cold, l => Assert.Contains(l.Items, i => i.Category == Category.Outerwear));
+
+        var hot = _gen.Suggest(Wardrobe(), new Dictionary<int, DateOnly>(), new(Occasion.Casual, 33, false, Today));
+        Assert.All(hot, l => Assert.DoesNotContain(l.Items, i => i.Category == Category.Outerwear));
+        Assert.DoesNotContain(hot[0].Items, i => i.Name == "Moletom");
+    }
+
+    [Fact]
+    public void Party_never_uses_workout_clothes()
+    {
+        for (var seed = 0; seed < 20; seed++)
+        {
+            var looks = _gen.Suggest(Wardrobe(), new Dictionary<int, DateOnly>(), new(Occasion.Party, 14, false, Today, Seed: seed));
+            Assert.All(looks, l => Assert.DoesNotContain(l.Items, i => i.Style == Style.Sporty));
+        }
+    }
+
+    [Fact]
+    public void Rain_prefers_rain_friendly_shoes()
+    {
+        var best = _gen.Suggest(Wardrobe(), new Dictionary<int, DateOnly>(), new(Occasion.Casual, 20, true, Today))[0];
+        Assert.Contains(best.Items, i => i.Name == "Bota");
+    }
+
+    [Fact]
+    public void Pieces_worn_yesterday_are_avoided()
+    {
+        var items = Wardrobe();
+        var first = _gen.Suggest(items, new Dictionary<int, DateOnly>(), new(Occasion.Casual, 25, false, Today))[0];
+        var lastWorn = first.Items.Where(i => i.Category is Category.Top or Category.Bottom).ToDictionary(i => i.Id, _ => Today.AddDays(-1));
+
+        var next = _gen.Suggest(items, lastWorn, new(Occasion.Casual, 25, false, Today))[0];
+        Assert.False(next.Items.Where(i => i.Category is Category.Top or Category.Bottom).All(i => lastWorn.ContainsKey(i.Id)));
+    }
+
+    [Fact]
+    public void Suggestions_differ_from_each_other()
+    {
+        var looks = _gen.Suggest(Wardrobe(), new Dictionary<int, DateOnly>(), new(Occasion.Casual, 22, false, Today, Count: 3));
+        Assert.True(looks.Count >= 2);
+        for (var a = 0; a < looks.Count; a++)
+            for (var b = a + 1; b < looks.Count; b++)
+                Assert.NotEqual(looks[a].Items.Select(i => i.Id).OrderBy(x => x), looks[b].Items.Select(i => i.Id).OrderBy(x => x));
+    }
+
+    [Fact]
+    public void Empty_or_incomplete_wardrobe_returns_nothing()
+    {
+        Assert.Empty(_gen.Suggest([], new Dictionary<int, DateOnly>(), new(Occasion.Casual, 22, false, Today)));
+        var onlyTops = Wardrobe().Where(i => i.Category == Category.Top);
+        Assert.Empty(_gen.Suggest(onlyTops, new Dictionary<int, DateOnly>(), new(Occasion.Casual, 22, false, Today)));
+    }
+
+    [Theory]
+    [InlineData(new[] { "preto", "branco", "cinza" }, "Neutro")]
+    [InlineData(new[] { "preto", "preto", "preto" }, "Monocromático")]
+    [InlineData(new[] { "branco", "vermelho", "jeans" }, "Ponto de cor")]
+    [InlineData(new[] { "azul", "laranja", "branco" }, "Complementar")]
+    [InlineData(new[] { "vermelho", "verde", "amarelo", "roxo" }, "Muitas cores")]
+    public void Color_harmony_is_classified(string[] colors, string expected)
+    {
+        var look = colors.Select((c, i) => Item($"p{i}", Category.Top, c, Style.Casual, 2, 2)).ToList();
+        Assert.Equal(expected, OutfitGenerator.ColorHarmony(look).harmony);
+    }
+
+    [Fact]
+    public void Work_dress_code_excludes_straps_necklines_skirts_and_open_shoes()
+    {
+        var wardrobe = new List<ClothingItem>
+        {
+            Item("Regata", Category.Top, "branco", Style.SmartCasual, 1, 3),
+            Item("Blusa decote V", Category.Top, "preto", Style.SmartCasual, 2, 3),
+            Item("Blusa gola redonda", Category.Top, "branco", Style.SmartCasual, 2, 3),
+            Item("Saia lápis", Category.Bottom, "preto", Style.SmartCasual, 2, 4),
+            Item("Calça alfaiataria", Category.Bottom, "preto", Style.SmartCasual, 3, 4),
+            Item("Sandália", Category.Shoes, "preto", Style.SmartCasual, 1, 4),
+            Item("Mocassim", Category.Shoes, "preto", Style.SmartCasual, 2, 4),
+        };
+        wardrobe[0].Sleeve = SleeveType.WideStraps;
+        wardrobe[1].Neckline = Neckline.VNeck;
+        wardrobe[2].Neckline = Neckline.Round;
+        wardrobe[3].SubType = "saia";
+        wardrobe[5].SubType = "sandália";
+        wardrobe[6].SubType = "mocassim";
+
+        var looks = _gen.Suggest(wardrobe, new Dictionary<int, DateOnly>(),
+            new(Occasion.Work, 26, false, Today, Preferences: new StylePreferences()));
+
+        var used = looks.SelectMany(l => l.Items).Select(i => i.Name).ToHashSet();
+        Assert.NotEmpty(looks);
+        Assert.DoesNotContain("Regata", used);
+        Assert.DoesNotContain("Blusa decote V", used);
+        Assert.DoesNotContain("Saia lápis", used);
+        Assert.DoesNotContain("Sandália", used);
+    }
+
+    [Fact]
+    public void Person_who_feels_cold_at_25_gets_a_jacket_at_23()
+    {
+        var prefs = new StylePreferences { ColdBelowC = 25 };
+        var looks = _gen.Suggest(Wardrobe(), new Dictionary<int, DateOnly>(),
+            new(Occasion.Casual, 23, false, Today, Preferences: prefs));
+        Assert.All(looks, l => Assert.Contains(l.Items, i => i.Category == Category.Outerwear));
+    }
+
+    [Fact]
+    public void Never_again_combination_does_not_come_back_and_dirty_items_are_skipped()
+    {
+        var w = Wardrobe();
+        var first = _gen.Suggest(w, new Dictionary<int, DateOnly>(), new(Occasion.Casual, 22, false, Today))[0];
+        var main = first.Items.Where(i => i.Category is Category.Top or Category.Bottom).Select(i => i.Id).ToArray();
+        var dirtyShoe = w.First(i => i.Category == Category.Shoes).Id;
+        var looks = _gen.Suggest(w, new Dictionary<int, DateOnly>(), new(Occasion.Casual, 22, false, Today)
+        {
+            Feedback = [new LookFeedback(main, false, DateTime.UtcNow)],
+            Excluded = new HashSet<int> { dirtyShoe }
+        });
+        Assert.DoesNotContain(looks, l => main.All(id => l.Items.Any(i => i.Id == id)));
+        Assert.DoesNotContain(looks, l => l.Items.Any(i => i.Id == dirtyShoe));
+    }
+}

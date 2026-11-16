@@ -1,0 +1,71 @@
+@page
+@model DeclutterModel
+@{
+    ViewData["Title"] = "Desapego";
+    var r = Model.Report;
+    var stuck = r.Candidates.Where(c => c.Item.Price.HasValue).Sum(c => c.Item.Price!.Value);
+}
+<link rel="stylesheet" href="~/css/insights.css" asp-append-version="true" />
+
+<div class="insights-head mb-4">
+    <h1 class="h3 mb-1">Desapego</h1>
+    <p class="text-muted mb-0">Peças que não saem do armário há 6 meses ou mais. Doe, venda ou dê mais uma chance.</p>
+</div>
+
+<div class="row g-3 mb-4">
+    <div class="col-6 col-md-3"><div class="card p-3"><div class="kpi">@r.Candidates.Count</div><div class="kpi-label">peças paradas</div></div></div>
+    <div class="col-6 col-md-3"><div class="card p-3"><div class="kpi">@(stuck > 0 ? stuck.ToString("C0") : "–")</div><div class="kpi-label">em roupas sem uso</div></div></div>
+    <div class="col-6 col-md-3"><div class="card p-3"><div class="kpi">@r.NewItems</div><div class="kpi-label">peças novas (fora da lista por @DeclutterAnalyzer.NewItemDays dias)</div></div></div>
+    <div class="col-6 col-md-3"><div class="card p-3"><div class="kpi">@r.Snoozed</div><div class="kpi-label">que você decidiu manter</div></div></div>
+</div>
+
+@if (r.Candidates.Count == 0)
+{
+    <div class="card p-4 text-center">
+        <div class="empty-emoji" aria-hidden="true">🌸</div>
+        <p class="fw-semibold mb-1">Nada para desapegar agora!</p>
+        <p class="text-muted small mb-0">
+            @(r.Snoozed > 0
+                ? $"As outras peças foram usadas nos últimos 6 meses, e {r.Snoozed} você decidiu manter por enquanto."
+                : "Todas as suas peças foram usadas nos últimos 6 meses. Seu guarda-roupa está vivo e florido.")
+        </p>
+    </div>
+}
+else
+{
+    <div class="declutter-grid">
+        @foreach (var c in r.Candidates)
+        {
+            var color = ColorPalette.Get(c.Item.PrimaryColor);
+            <article class="card p-3 declutter-card">
+                <div class="d-flex gap-3">
+                    <a class="declutter-thumb" asp-page="/Wardrobe/Edit" asp-route-id="@c.Item.Id"><partial name="_ItemThumb" model="c.Item" /></a>
+                    <div class="min-w-0">
+                        <h2 class="h6 mb-1 text-truncate"><a asp-page="/Wardrobe/Edit" asp-route-id="@c.Item.Id">@c.Item.Name</a></h2>
+                        <div class="small text-muted mb-1"><span class="color-dot" style="background:@color.Hex"></span> @color.Name · @c.Item.Category.DisplayName()</div>
+                        <span class="badge rounded-pill @(c.Reason == DeclutterReason.NeverWorn ? "badge-never" : "badge-idle")">
+                            @(c.Reason == DeclutterReason.NeverWorn ? "nunca usada" : $"{c.Wears} uso(s)")
+                        </span>
+                    </div>
+                </div>
+                <p class="small mt-2 mb-1">@c.ReasonText</p>
+                @if (c.CostPerWear is { } cpu)
+                {
+                    <p class="small text-muted mb-2">💸 Custou @c.Item.Price!.Value.ToString("C") · <strong>@cpu.ToString("C") por uso</strong>@(c.Wears == 0 ? " (e nenhum uso ainda)" : "")</p>
+                }
+                <div class="d-flex flex-wrap gap-2 mt-auto">
+                    <form method="post" asp-page-handler="Donate" asp-route-id="@c.Item.Id">
+                        <button class="btn btn-accent btn-sm">💝 Doar</button>
+                    </form>
+                    <form method="post" asp-page-handler="Sell" asp-route-id="@c.Item.Id">
+                        <button class="btn btn-outline-secondary btn-sm">💸 Vender</button>
+                    </form>
+                    <form method="post" asp-page-handler="Keep" asp-route-id="@c.Item.Id">
+                        <button class="btn btn-outline-secondary btn-sm" title="Esconde por @DeclutterAnalyzer.SnoozeDays dias">🌱 Manter</button>
+                    </form>
+                </div>
+            </article>
+        }
+    </div>
+    <p class="small text-muted mt-3">Doar e vender tiram a peça das sugestões (ela continua no guarda-roupa como desativada). Manter esconde a peça desta lista por @DeclutterAnalyzer.SnoozeDays dias.</p>
+}

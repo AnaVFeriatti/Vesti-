@@ -1,0 +1,28 @@
+@page
+@model MontarLooks.Web.Pages.Wardrobe.BulkModel
+@{ ViewData["Title"] = "Enviar fotos"; }
+
+<a asp-page="Index" class="small text-muted">← Guarda-roupa</a>
+<h1 class="h3 my-3">Enviar várias fotos</h1>
+
+<div class="row">
+    <div class="col-lg-7">
+        <form method="post" enctype="multipart/form-data" class="card p-4">
+            <div asp-validation-summary="All" class="text-danger"></div>
+            <p class="text-muted">
+                Tire uma foto de cada peça (de preferência esticada num fundo liso) e envie todas de uma vez.
+                Cada foto vira uma peça, e em seguida eu te levo peça por peça para preencher cor, estilo, calor e formalidade.
+            </p>
+            <div class="mb-3">
+                <label class="form-label" for="photos">Fotos</label>
+                <input id="photos" type="file" name="Photos" accept="image/*" multiple class="form-control" required />
+            </div>
+            <div class="mb-4">
+                <label class="form-label" asp-for="Category">Categoria inicial (dá pra mudar depois)</label>
+                <select asp-for="Category" class="form-select" asp-items="Html.GetEnumSelectList<Category>()"></select>
+                <div class="form-text">Dica: envie em lotes por categoria, por exemplo todas as calças juntas.</div>
+            </div>
+            <button class="btn btn-accent">Enviar</button>
+        </form>
+    </div>
+</div>

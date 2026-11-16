@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>@ViewData["Title"] · Vestiê</title>
+    <meta name="theme-color" content="#c2185b" />
+    <meta name="application-name" content="Vestiê" />
+    <link rel="icon" type="image/svg+xml" href="~/img/flower-rose.svg" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800&family=Quicksand:wght@600;700&display=swap" />
+    <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css" />
+    <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
+</head>
+<body>
+    <nav class="navbar navbar-expand-lg app-nav">
+        <div class="container">
+            <a class="navbar-brand fw-bold" asp-page="/Index"><img src="~/img/flower-rose.svg" alt="" class="brand-flower" /> Vestiê</a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#nav"
+                    aria-controls="nav" aria-expanded="false" aria-label="Abrir menu">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="nav">
+                @{
+                    var current = ViewContext.RouteData.Values["page"]?.ToString() ?? "";
+                    string Active(string page) => string.Equals(current, page, StringComparison.OrdinalIgnoreCase) ? "active" : "";
+                    var toolsActive = NavMenu.Tools.SelectMany(g => g.Links).Any(l => l.Page == current && l.Page != "/Settings");
+                }
+                <ul class="navbar-nav me-auto">
+                    @foreach (var l in NavMenu.Main)
+                    {
+                        <li class="nav-item"><a class="nav-link @Active(l.Page)" asp-page="@l.Page" aria-current="@(Active(l.Page) != "" ? "page" : null)"><partial name="_Icon" model="l.Icon" /> @l.Label</a></li>
+                    }
+                    <li class="nav-item dropdown">
+                        <a class="nav-link dropdown-toggle @(toolsActive ? "active" : "")" href="#" role="button" data-bs-toggle="dropdown" aria-expanded="false"><partial name="_Icon" model="@("tools")" /> Ferramentas</a>
+                        <div class="dropdown-menu dropdown-menu-lg-end tools-menu">
+                            @foreach (var g in NavMenu.Tools)
+                            {
+                                <div class="tools-group">
+                                    <div class="dropdown-header">@g.Title</div>
+                                    @foreach (var l in g.Links)
+                                    {
+                                        <a class="dropdown-item @Active(l.Page)" asp-page="@l.Page">
+                                            <span class="tools-ico"><partial name="_Icon" model="l.Icon" /></span>
+                                            <span><span class="d-block fw-semibold">@l.Label</span><small class="text-muted">@l.Hint</small></span>
+                                        </a>
+                                    }
+                                </div>
+                            }
+                        </div>
+                    </li>
+                </ul>
+                <ul class="navbar-nav">
+                    <li class="nav-item"><a class="nav-link @Active("/Settings")" asp-page="/Settings"><partial name="_Icon" model="@("gear")" /> Configurações</a></li>
+                </ul>
+            </div>
+        </div>
+    </nav>
+    <main class="container app-main pb-5">
+        @if (TempData["Message"] is string msg)
+        {
+            <div class="alert alert-success alert-dismissible fade show" role="alert">
+                @msg
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Fechar"></button>
+            </div>
+        }
+        @RenderBody()
+    </main>
+    <footer class="app-footer">feito com carinho 🌸 Vestiê</footer>
+
+    <script src="~/lib/jquery/dist/jquery.min.js"></script>
+    <script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="~/js/site.js" asp-append-version="true"></script>
+    @await RenderSectionAsync("Scripts", required: false)
+</body>
+</html>

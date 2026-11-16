@@ -1,0 +1,125 @@
+@page
+@model CapsuleModel
+@{
+    ViewData["Title"] = "Cápsula e lacunas";
+    var r = Model.Report;
+    var maxLooks = Math.Max(1, r.BestPerformers.FirstOrDefault()?.Looks ?? 1);
+    var maxGap = Math.Max(1, r.Gaps.FirstOrDefault()?.NewLooks ?? 1);
+    string Looks(int n) => n == 1 ? "1 look" : $"{n} looks";
+}
+<link rel="stylesheet" href="~/css/insights.css" asp-append-version="true" />
+
+<div class="insights-head mb-4">
+    <h1 class="h3 mb-1">Cápsula e lacunas</h1>
+    <p class="text-muted mb-0">Quais peças trabalham mais, quais estão sozinhas e o que faria seu guarda-roupa render mais.</p>
+</div>
+
+@if (r.ActiveItems == 0)
+{
+    <div class="card p-4"><p class="mb-0">Cadastre peças (ou carregue o exemplo em <a asp-page="/Settings">Configurações</a>) para ver a análise.</p></div>
+    return;
+}
+
+<div class="row g-3 mb-4">
+    <div class="col-6 col-md-4"><div class="card p-3"><div class="kpi">@r.TotalLooks</div><div class="kpi-label">looks bons possíveis hoje</div></div></div>
+    <div class="col-6 col-md-4"><div class="card p-3"><div class="kpi">@r.ActiveItems</div><div class="kpi-label">peças ativas analisadas</div></div></div>
+    <div class="col-12 col-md-4"><div class="card p-3"><div class="kpi">@r.Orphans.Count</div><div class="kpi-label">peças órfãs (menos de @CapsuleService.OrphanThreshold looks)</div></div></div>
+</div>
+
+<div class="row g-3 mb-4">
+    <div class="col-lg-6">
+        <section class="card p-3 h-100" aria-labelledby="best-title">
+            <h2 id="best-title" class="h5">🏆 Peças que mais rendem</h2>
+            <p class="small text-muted">Quantos looks bons (parte de cima + de baixo ou vestido, com calçado) cada peça ajuda a montar.</p>
+            @if (r.BestPerformers.Count == 0)
+            {
+                <p class="text-muted small mb-0">Ainda não dá para montar looks completos. Confira se há partes de cima, de baixo e calçados.</p>
+            }
+            <ol class="rank-list">
+                @foreach (var x in r.BestPerformers)
+                {
+                    <li>
+                        <a class="rank-row" asp-page="/Wardrobe/Edit" asp-route-id="@x.Item.Id">
+                            <span class="rank-thumb"><partial name="_ItemThumb" model="x.Item" /></span>
+                            <span class="rank-body">
+                                <span class="fw-semibold d-block text-truncate">@x.Item.Name</span>
+                                <span class="rank-bar" aria-hidden="true"><span style="width:@(Math.Round(100.0 * x.Looks / maxLooks))%"></span></span>
+                            </span>
+                            <span class="rank-num">@Looks(x.Looks)</span>
+                        </a>
+                    </li>
+                }
+            </ol>
+            @if (r.Layers.Count > 0)
+            {
+                <h3 class="h6 mt-3 mb-1">🧥 Casacos que mais trabalham</h3>
+                <p class="small text-muted mb-2">Quantos desses looks cada um completa por cima.</p>
+                <ul class="layer-list">
+                    @foreach (var x in r.Layers)
+                    {
+                        <li><a asp-page="/Wardrobe/Edit" asp-route-id="@x.Item.Id">@x.Item.Name</a> <span class="rank-num">@Looks(x.Looks)</span></li>
+                    }
+                </ul>
+            }
+        </section>
+    </div>
+    <div class="col-lg-6">
+        <section class="card p-3 h-100" aria-labelledby="orphan-title">
+            <h2 id="orphan-title" class="h5">🥀 Peças órfãs</h2>
+            <p class="small text-muted">Combinam com quase nada do que você tem. Uma peça neutra nova pode salvá-las, ou talvez seja hora do <a asp-page="/Declutter">desapego</a>.</p>
+            @if (r.Orphans.Count == 0)
+            {
+                <p class="text-muted small mb-0">Nenhuma! Todas as peças conversam bem entre si. 🌷</p>
+            }
+            else
+            {
+                <div class="wardrobe-grid insights-grid-sm">
+                    @foreach (var x in r.Orphans)
+                    {
+                        var c = ColorPalette.Get(x.Item.PrimaryColor);
+                        <a class="wardrobe-card" asp-page="/Wardrobe/Edit" asp-route-id="@x.Item.Id">
+                            <partial name="_ItemThumb" model="x.Item" />
+                            <div class="mt-2 small fw-semibold text-truncate">@x.Item.Name</div>
+                            <div class="small text-muted"><span class="color-dot" style="background:@c.Hex"></span> @(x.Looks == 0 ? "nenhum look" : Looks(x.Looks))</div>
+                        </a>
+                    }
+                </div>
+            }
+        </section>
+    </div>
+</div>
+
+<section class="card p-3" aria-labelledby="gap-title">
+    <h2 id="gap-title" class="h5">🛍️ Lacunas: o que faria seu armário render mais</h2>
+    <p class="small text-muted">Simulamos peças básicas que você ainda não tem e contamos os looks novos que cada uma criaria com as suas roupas.</p>
+    <div class="gap-list">
+        @foreach (var g in r.Gaps)
+        {
+            var c = ColorPalette.Get(g.Piece.PrimaryColor);
+            var art = g.Piece.Name.StartsWith("Calça") || g.Piece.Name.StartsWith("Camis") || g.Piece.Name.StartsWith("Saia") || g.Piece.Name.StartsWith("Blusa") || g.Piece.Name.StartsWith("Bota") || g.Piece.Name.StartsWith("Jaqueta") ? "Uma" : "Um";
+            <div class="gap-row @(g.NewLooks == 0 ? "gap-zero" : "")">
+                <span class="gap-swatch" style="background:@c.Hex" aria-hidden="true"></span>
+                <div class="gap-body">
+                    <div>
+                        @if (g.NewLooks > 0)
+                        {
+                            <span>@art <strong>@g.Piece.Name.ToLowerInvariant()</strong> renderia mais <strong class="gap-num">@Looks(g.NewLooks)</strong></span>
+                        }
+                        else
+                        {
+                            <span>@art <strong>@g.Piece.Name.ToLowerInvariant()</strong> não combinaria com o que você tem hoje</span>
+                        }
+                        @if (g.Piece.Category == Category.Outerwear) { <span class="badge rounded-pill badge-layer ms-1">por cima</span> }
+                        @if (g.AlreadyOwnSimilar) { <span class="badge rounded-pill text-bg-light ms-1">você já tem algo parecido</span> }
+                    </div>
+                    <span class="rank-bar" aria-hidden="true"><span style="width:@(Math.Round(100.0 * g.NewLooks / maxGap))%"></span></span>
+                    @if (g.TopPartners.Count > 0)
+                    {
+                        <div class="small text-muted mt-1">Combina com: @string.Join(", ", g.TopPartners.Select(p => p.Item.Name))</div>
+                    }
+                </div>
+            </div>
+        }
+    </div>
+    <p class="small text-muted mt-3 mb-0">Quer guardar uma ideia? Adicione à <a asp-page="/Wishlist">lista de desejos</a>.</p>
+</section>

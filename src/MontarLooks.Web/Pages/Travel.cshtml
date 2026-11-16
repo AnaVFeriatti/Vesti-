@@ -1,0 +1,293 @@
+@page
+@model TravelModel
+@using System.Globalization
+@{
+    ViewData["Title"] = "Mala de viagem";
+    var inv = CultureInfo.InvariantCulture;
+    var r = Model.Result;
+    var start = Model.Start ?? Model.Today;
+    var end = start.AddDays(Model.Days - 1);
+    var checkKey = r == null ? "" : "mala:" + string.Join("-", r.Items.Select(i => i.Id)) + ":" + Model.Days;
+}
+<link rel="stylesheet" href="~/css/planner.css" asp-append-version="true" />
+
+<h1 class="h3 mb-3 planner-title">Mala de viagem</h1>
+
+<div class="row g-4">
+    <div class="col-lg-4">
+        <form method="get" class="card p-4 mb-3" id="trip-form">
+            <label class="form-label fw-semibold" for="dest">Para onde?</label>
+            <input id="dest" name="destination" class="form-control mb-3" value="@Model.Destination" placeholder="ex.: Gramado, Lisboa, Salvador" required maxlength="100" autocomplete="off" />
+            <input type="hidden" name="lat" id="lat" value="@Model.Lat?.ToString(inv)" />
+            <input type="hidden" name="lon" id="lon" value="@Model.Lon?.ToString(inv)" />
+
+            <div class="row g-2 mb-3">
+                <div class="col-7">
+                    <label class="form-label" for="start">Ida</label>
+                    <input id="start" type="date" name="start" class="form-control" value="@start.ToString("yyyy-MM-dd")"
+                           min="@Model.Today.ToString("yyyy-MM-dd")" />
+                </div>
+                <div class="col-5">
+                    <label class="form-label" for="days">Dias</label>
+                    <input id="days" type="number" name="days" min="1" max="@TravelModel.MaxDays" class="form-control" value="@Model.Days" />
+                </div>
+            </div>
+
+            <fieldset class="mb-3">
+                <legend class="form-label fs-6">Principais ocasiões</legend>
+                <div class="trip-occasions">
+                    @foreach (var o in TravelModel.TripOccasions)
+                    {
+                        var id = "occ-" + o;
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" name="occasions" value="@o" id="@id" checked="@Model.Occasions.Contains(o)" />
+                            <label class="form-check-label" for="@id">@o.DisplayName()</label>
+                        </div>
+                    }
+                </div>
+                <div class="form-text">A primeira marcada é a principal; os dias se revezam entre elas.</div>
+            </fieldset>
+            <button class="btn btn-accent w-100">Montar mala</button>
+        </form>
+
+        @if (Model.SavedTrips.Count > 0)
+        {
+            <div class="card p-4">
+                <h2 class="h6 mb-2">Viagens salvas</h2>
+                <ul class="list-unstyled mb-0 trip-saved">
+                    @foreach (var t in Model.SavedTrips)
+                    {
+                        <li class="d-flex justify-content-between align-items-center gap-2 py-1">
+                            <a asp-page="/Travel" asp-route-trip="@t.Id" class="text-truncate">
+                                @t.Destination <span class="small text-muted">· @t.StartDate.ToString("dd/MM") · @t.Days @(t.Days == 1 ? "dia" : "dias")</span>
+                            </a>
+                            <form method="post" asp-page-handler="Delete" asp-route-id="@t.Id">
+                                <button class="btn btn-sm btn-link p-0" aria-label="Remover viagem para @t.Destination"
+                                        onclick="return confirm('Remover esta viagem?')">✕</button>
+                            </form>
+                        </li>
+                    }
+                </ul>
+            </div>
+        }
+    </div>
+
+    <div class="col-lg-8">
+        @if (Model.NotFound)
+        {
+            <div class="alert alert-warning">Não encontrei “@Model.Destination”. Tente o nome da cidade sem abreviações.</div>
+        }
+
+        @if (r == null)
+        {
+            @if (!Model.NotFound)
+            {
+                <div class="card p-5 text-center">
+                    <h2 class="h5">Monte uma mala enxuta</h2>
+                    <p class="text-muted mb-0">Diga o destino, quantos dias e as ocasiões. Eu olho a previsão do tempo e escolho poucas peças que combinam muito entre si.</p>
+                </div>
+            }
+        }
+        else
+        {
+            <div class="card p-4 mb-3">
+                <div class="d-flex flex-wrap justify-content-between align-items-start gap-2">
+                    <div>
+                        <h2 class="h5 mb-1">📍 @Model.Place!.Label</h2>
+                        <div class="text-muted small">
+                            @start.ToString("dd/MM") a @end.ToString("dd/MM") · @Model.Days @(Model.Days == 1 ? "dia" : "dias") ·
+                            @string.Join(", ", Model.Occasions.Select(o => o.DisplayName().ToLowerInvariant()))
+                        </div>
+                        @if (Model.OtherPlaces.Count > 0)
+                        {
+                            <div class="small mt-1">Não é esse lugar?
+                                @foreach (var p in Model.OtherPlaces)
+                                {
+                                    var q = new List<KeyValuePair<string, string?>>
+                                    {
+                                        new("destination", p.Label), new("lat", p.Latitude.ToString(inv)), new("lon", p.Longitude.ToString(inv)),
+                                        new("start", start.ToString("yyyy-MM-dd")), new("days", Model.Days.ToString(inv))
+                                    };
+                                    q.AddRange(Model.Occasions.Select(o => new KeyValuePair<string, string?>("occasions", o.ToString())));
+                                    <a class="link-secondary me-2" href="@(Url.Page("/Travel") + Microsoft.AspNetCore.Http.QueryString.Create(q))">@p.Label</a>
+                                }
+                            </div>
+                        }
+                    </div>
+                    @if (Model.Saved == null && r.Items.Count > 0)
+                    {
+                        <form method="post" asp-page-handler="Save">
+                            <input type="hidden" name="Destination" value="@Model.Place.Label" />
+                            <input type="hidden" name="Lat" value="@Model.Place.Latitude.ToString(CultureInfo.CurrentCulture)" />
+                            <input type="hidden" name="Lon" value="@Model.Place.Longitude.ToString(CultureInfo.CurrentCulture)" />
+                            <input type="hidden" name="Start" value="@start.ToString("yyyy-MM-dd")" />
+                            <input type="hidden" name="Days" value="@Model.Days" />
+                            @foreach (var o in Model.Occasions)
+                            {
+                                <input type="hidden" name="Occasions" value="@o" />
+                            }
+                            <button class="btn btn-accent btn-sm">💾 Salvar viagem</button>
+                        </form>
+                    }
+                    else if (Model.Saved != null)
+                    {
+                        <span class="badge badge-harmony">Mala salva</span>
+                    }
+                </div>
+
+                <div class="trip-forecast mt-3" aria-label="Previsão do tempo">
+                    @foreach (var (day, f) in Model.Weather)
+                    {
+                        <div class="trip-fday @(f == null ? "is-estimate" : "")" title="@(f?.Description ?? "Estimativa")">
+                            <div class="small fw-semibold">@TravelModel.DayLabel(day.Date)</div>
+                            @if (f != null)
+                            {
+                                <div class="planner-wicon" aria-hidden="true">@f.Icon</div>
+                                <div class="small"><strong>@f.MaxC.ToString("0")°</strong>/@f.MinC.ToString("0")°</div>
+                                <div class="small text-muted">💧 @f.RainChancePercent%</div>
+                            }
+                            else
+                            {
+                                <div class="planner-wicon" aria-hidden="true">🔮</div>
+                                <div class="small">~@day.TemperatureC.ToString("0")°</div>
+                                <div class="small text-muted">estimativa</div>
+                            }
+                        </div>
+                    }
+                </div>
+                @if (Model.HasEstimate)
+                {
+                    <p class="small text-muted mb-0 mt-2">
+                        🔮 A previsão só alcança @TravelModel.ForecastDays dias; nos outros dias usei uma estimativa pela média da previsão disponível.
+                        Confira de novo perto da viagem.
+                    </p>
+                }
+            </div>
+
+            @if (r.Items.Count == 0)
+            {
+                <div class="card p-4">
+                    <p class="mb-0">
+                        @(Model.WardrobeCount == 0 ? "Seu guarda-roupa está vazio." : "Não encontrei peças que sirvam para essas ocasiões e esse clima.")
+                        <a asp-page="/Wardrobe/Index">Ver guarda-roupa</a>.
+                    </p>
+                </div>
+            }
+            else
+            {
+                <div class="row g-3 mb-3">
+                    <div class="col-6 col-md-4"><div class="card p-3 h-100"><div class="kpi">@r.Items.Count</div><div class="kpi-label">peças na mala</div></div></div>
+                    <div class="col-6 col-md-4"><div class="card p-3 h-100"><div class="kpi">@r.PossibleLooks</div><div class="kpi-label">looks possíveis</div></div></div>
+                    <div class="col-12 col-md-4"><div class="card p-3 h-100"><div class="kpi">@((r.PossibleLooks / (double)Math.Max(1, r.Items.Count)).ToString("0.#"))</div><div class="kpi-label">looks por peça</div></div></div>
+                </div>
+
+                <div class="card p-4 mb-3">
+                    <div class="d-flex justify-content-between align-items-center mb-2">
+                        <h2 class="h5 mb-0">Checklist da mala</h2>
+                        <span class="small text-muted" id="pack-count" aria-live="polite"></span>
+                    </div>
+                    <ul class="trip-checklist list-unstyled mb-3" data-key="@checkKey">
+                        @foreach (var it in r.Items)
+                        {
+                            <li>
+                                <label class="trip-check">
+                                    <input type="checkbox" class="form-check-input" value="@it.Id" />
+                                    <span class="trip-thumb"><partial name="_ItemThumb" model="it" /></span>
+                                    <span>
+                                        <span class="d-block fw-semibold">@it.Name</span>
+                                        <span class="small text-muted">@it.Category.DisplayName()</span>
+                                    </span>
+                                </label>
+                            </li>
+                        }
+                    </ul>
+                    <h3 class="h6">Não esqueça</h3>
+                    <ul class="trip-checklist trip-basics list-unstyled mb-0" data-key="@(checkKey):basicos">
+                        @for (var b = 0; b < Model.Basics.Count; b++)
+                        {
+                            <li>
+                                <label class="trip-check">
+                                    <input type="checkbox" class="form-check-input" value="b@b" />
+                                    <span>@Model.Basics[b]</span>
+                                </label>
+                            </li>
+                        }
+                    </ul>
+                </div>
+
+                <h2 class="h5 mb-3">Looks de cada dia</h2>
+                @foreach (var day in r.Days)
+                {
+                    <div class="card look-card p-4 mb-3">
+                        <div class="d-flex justify-content-between align-items-center mb-2">
+                            <div class="look-title">@TravelModel.DayLabel(day.Date)</div>
+                            <span class="small text-muted">@day.Occasion.DisplayName()</span>
+                        </div>
+                        @if (day.Looks.Count == 0)
+                        {
+                            <p class="small text-muted mb-0">Sem combinação boa para este dia com as peças da mala.</p>
+                        }
+                        else
+                        {
+                            <div class="trip-day-looks">
+                                @foreach (var s in day.Looks)
+                                {
+                                    <div class="trip-look">
+                                        <partial name="_Mannequin" model="new MannequinView(s.Items, Model.Prefs, Compact: true)" />
+                                        <div>
+                                            <span class="badge badge-harmony mb-2">@s.Harmony</span>
+                                            <div class="look-items">
+                                                @foreach (var it in s.Items)
+                                                {
+                                                    <div class="look-item">
+                                                        <partial name="_ItemThumb" model="it" />
+                                                        <div class="mt-1">@it.Name</div>
+                                                    </div>
+                                                }
+                                            </div>
+                                        </div>
+                                    </div>
+                                }
+                            </div>
+                        }
+                    </div>
+                }
+            }
+        }
+    </div>
+</div>
+
+<script>
+(() => {
+    // Picking a new destination by hand forgets the coordinates of the previous one.
+    const dest = document.getElementById("dest");
+    dest?.addEventListener("input", () => {
+        document.getElementById("lat").value = "";
+        document.getElementById("lon").value = "";
+    });
+
+    // Packing checklist: only in this browser (handy on the phone while packing).
+    const read = k => { try { return JSON.parse(localStorage.getItem(k) || "[]"); } catch { return []; } };
+    const write = (k, v) => { try { localStorage.setItem(k, JSON.stringify(v)); } catch { } };
+    const lists = document.querySelectorAll(".trip-checklist");
+    const counter = document.getElementById("pack-count");
+    const update = () => {
+        if (!counter) return;
+        const all = document.querySelectorAll(".trip-checklist input");
+        const done = [...all].filter(i => i.checked).length;
+        counter.textContent = `${done} de ${all.length} na mala`;
+    };
+    lists.forEach(list => {
+        const key = list.dataset.key;
+        const saved = new Set(read(key));
+        list.querySelectorAll("input").forEach(i => {
+            i.checked = saved.has(i.value);
+            i.addEventListener("change", () => {
+                write(key, [...list.querySelectorAll("input:checked")].map(x => x.value));
+                update();
+            });
+        });
+    });
+    update();
+})();
+</script>

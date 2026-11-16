@@ -1,0 +1,46 @@
+/* Planejador da semana + Mala de viagem */
+.planner-title { font-family: var(--title-font); color: var(--pink-dark); }
+
+.planner-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 1rem; }
+.planner-day { padding: 1.1rem; display: flex; flex-direction: column; }
+.planner-day.is-today { box-shadow: 0 0 0 3px var(--pink-petal); }
+.planner-day.is-past { opacity: .75; }
+.planner-day.is-locked { background: linear-gradient(180deg, var(--purple-soft), #fff 40%); }
+.planner-dayname { font-family: var(--title-font); text-transform: capitalize; color: var(--ink); font-weight: 700; }
+.planner-today { background: var(--pink); color: #fff; font-size: .68rem; vertical-align: middle; border-radius: 999px; }
+.planner-weather { line-height: 1.2; min-width: 64px; }
+.planner-wicon { font-size: 1.7rem; line-height: 1; }
+
+.planner-look { display: grid; grid-template-columns: 96px 1fr; gap: .6rem; align-items: start; }
+.planner-look .mannequin.mq-compact { max-width: 96px; margin: 0; }
+.planner-items { gap: .4rem; }
+.planner-items .look-item { width: 64px; font-size: .7rem; }
+.planner-repeat .item-thumb { box-shadow: 0 0 0 2px var(--brown); }
+.planner-empty { border: 2px dashed var(--line); border-radius: 14px; padding: 1rem; text-align: center; color: var(--muted); font-size: .9rem; }
+
+/* Mala de viagem */
+.trip-occasions { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .1rem .8rem; }
+.trip-saved li + li { border-top: 1px solid var(--line); }
+.trip-forecast { display: flex; gap: .5rem; overflow-x: auto; padding-bottom: .3rem; }
+.trip-fday { flex: 0 0 auto; min-width: 70px; text-align: center; background: var(--pink-soft); border-radius: 14px; padding: .45rem .3rem; }
+.trip-fday.is-estimate { background: var(--purple-soft); }
+
+.trip-checklist { display: grid; grid-template-columns: repeat(auto-fill, minmax(210px, 1fr)); gap: .5rem; }
+.trip-check { display: flex; align-items: center; gap: .6rem; padding: .4rem .5rem; border-radius: 14px; cursor: pointer; border: 1px solid var(--line); background: #fff; width: 100%; }
+.trip-check:hover { background: var(--pink-soft); }
+.trip-check .form-check-input { flex: 0 0 auto; margin: 0; width: 1.2em; height: 1.2em; }
+.trip-check:has(input:checked) { background: var(--green-soft); border-color: #bfe0c9; }
+.trip-check:has(input:checked) .fw-semibold { text-decoration: line-through; color: var(--green); }
+.trip-thumb { width: 44px; flex: 0 0 44px; }
+.trip-thumb .item-thumb { border-radius: 10px; }
+.trip-basics .trip-check { padding: .5rem .7rem; }
+
+.trip-day-looks { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 1rem; }
+.trip-look { display: grid; grid-template-columns: 96px 1fr; gap: .7rem; align-items: start; }
+.trip-look .mannequin.mq-compact { max-width: 96px; margin: 0; }
+.trip-look .look-item { width: 70px; font-size: .7rem; }
+
+@media (max-width: 400px) {
+    .planner-look, .trip-look { grid-template-columns: 80px 1fr; }
+    .trip-occasions { grid-template-columns: 1fr; }
+}

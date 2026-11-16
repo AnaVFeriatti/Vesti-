@@ -1,0 +1,164 @@
+@page
+@model SettingsModel
+@using System.Globalization
+@{ ViewData["Title"] = "Configurações"; }
+
+<h1 class="h3 mb-4">Configurações</h1>
+
+<form method="post" asp-page-handler="Avatar" enctype="multipart/form-data" class="card p-4 mb-4">
+    <h2 class="h5">Meu provador</h2>
+    <div class="row g-4 align-items-center">
+        <div class="col-md-3 text-center">
+            <partial name="_Mannequin" model="@(new MannequinView(Array.Empty<ClothingItem>(), Model.Prefs))" />
+        </div>
+        <div class="col-md-9">
+            <p class="text-muted small">Cada sugestão aparece vestida num avatar seu. Escolha o tom de pele e o cabelo. Se quiser, mande uma foto do rosto: a IA local tira o fundo e ela vira a cabeça do avatar. A foto não sai do seu PC.</p>
+            <div class="row g-3">
+                <div class="col-6 col-md-3">
+                    <label class="form-label small" for="skinTone">Tom de pele</label>
+                    <input type="color" id="skinTone" name="skinTone" value="@Model.Prefs.SkinTone" class="form-control form-control-color w-100" data-live="skin" />
+                </div>
+                <div class="col-6 col-md-3">
+                    <label class="form-label small" for="hairColor">Cor do cabelo</label>
+                    <input type="color" id="hairColor" name="hairColor" value="@Model.Prefs.HairColor" class="form-control form-control-color w-100" data-live="hair" />
+                </div>
+                <div class="col-12 col-md-6">
+                    <label class="form-label small" for="hair">Cabelo</label>
+                    <select id="hair" name="hair" class="form-select" asp-items="Html.GetEnumSelectList<HairStyle>()" asp-for="Prefs.Hair"></select>
+                </div>
+                <div class="col-12 col-md-8">
+                    <label class="form-label small" for="face">Foto do rosto (opcional)</label>
+                    <input type="file" id="face" name="face" accept="image/*" class="form-control" />
+                </div>
+                <div class="col-12 col-md-8">
+                    <label class="form-label small" for="body">Foto de corpo inteiro (opcional)</label>
+                    <input type="file" id="body" name="body" accept="image/*" class="form-control" />
+                    <div class="form-text">De frente, em pé, braços um pouco afastados e roupa justinha. As peças do look são aplicadas por cima dela, como uma prévia.</div>
+                </div>
+                @if (Model.Prefs.BodyPhoto != null)
+                {
+                    <div class="col-12 col-md-4 d-flex align-items-end">
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" name="removeBody" value="true" id="removeBody" />
+                            <label class="form-check-label small" for="removeBody">Voltar para o avatar desenhado</label>
+                        </div>
+                    </div>
+                }
+                @if (Model.Prefs.FacePhoto != null)
+                {
+                    <div class="col-12 col-md-4 d-flex align-items-end">
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" name="removeFace" value="true" id="removeFace" />
+                            <label class="form-check-label small" for="removeFace">Tirar a foto do rosto</label>
+                        </div>
+                    </div>
+                }
+            </div>
+            <button class="btn btn-accent mt-3">Salvar provador</button>
+        </div>
+    </div>
+</form>
+
+<form method="post" asp-page-handler="Preferences" class="card p-4 mb-4">
+    <h2 class="h5">Meu jeito de vestir</h2>
+    <div class="row g-3 align-items-center mb-3">
+        <div class="col-md-6">
+            <label for="coldBelow" class="form-label">Começo a sentir frio abaixo de</label>
+            <div class="input-group" style="max-width: 12rem">
+                <input id="coldBelow" name="coldBelow" type="number" min="5" max="35" class="form-control" value="@Model.Prefs.ColdBelowC" />
+                <span class="input-group-text">°C</span>
+            </div>
+        </div>
+        <div class="col-md-6 small text-muted">
+            O padrão é 17°C. Se você sente frio com 25°C, coloque 25: os looks ficam mais quentinhos e o casaco aparece antes.
+        </div>
+    </div>
+
+    <h3 class="h6 mt-2">O que não pode em cada ocasião</h3>
+    <p class="small text-muted">Peças marcadas aqui nunca entram nos looks da ocasião. Para funcionar bem, preencha os detalhes da peça (manga/alça, decote, comprimento) e o tipo (saia, sandália, short...).</p>
+    <div class="accordion" id="rulesAcc">
+        @foreach (var occ in Enum.GetValues<Occasion>())
+        {
+            var active = Model.Prefs.For(occ);
+            var id = "occ" + occ;
+            <div class="accordion-item">
+                <h4 class="accordion-header">
+                    <button class="accordion-button @(active.Count > 0 ? "" : "collapsed")" type="button" data-bs-toggle="collapse" data-bs-target="#@id">
+                        @occ.DisplayName()
+                        @if (active.Count > 0) { <span class="badge rounded-pill text-bg-light ms-2">@active.Count regra(s)</span> }
+                    </button>
+                </h4>
+                <div id="@id" class="accordion-collapse collapse @(active.Count > 0 ? "show" : "")">
+                    <div class="accordion-body row g-1">
+                        @foreach (var rule in Enum.GetValues<DressRule>())
+                        {
+                            var cid = $"r_{occ}_{rule}";
+                            <div class="col-md-6 form-check">
+                                <input class="form-check-input" type="checkbox" name="rules" value="@occ:@rule" id="@cid" checked="@active.Contains(rule)" />
+                                <label class="form-check-label small" for="@cid">@rule.DisplayName()</label>
+                            </div>
+                        }
+                    </div>
+                </div>
+            </div>
+        }
+    </div>
+    <div class="mt-3"><button class="btn btn-accent">Salvar preferências</button></div>
+</form>
+
+<div class="row g-4">
+    <div class="col-lg-6">
+        <div class="card p-4">
+            <h2 class="h5">Cidade</h2>
+            <p class="text-muted mb-3">Atual: <strong>@Model.City.Name</strong></p>
+            <form method="get" class="d-flex gap-2 mb-3">
+                <input name="search" value="@Model.Search" class="form-control" placeholder="Buscar cidade (ex.: Ourinhos, Curitiba)" required />
+                <button class="btn btn-outline-secondary">Buscar</button>
+            </form>
+            @if (Model.Searched && Model.Results.Count == 0)
+            {
+                <p class="text-muted small">Nenhuma cidade encontrada (ou o serviço de clima está fora do ar).</p>
+            }
+            <div class="list-group">
+                @foreach (var r in Model.Results)
+                {
+                    <form method="post" asp-page-handler="City">
+                        <input type="hidden" name="name" value="@r.Label" />
+                        <input type="hidden" name="latitude" value="@r.Latitude.ToString(CultureInfo.InvariantCulture)" />
+                        <input type="hidden" name="longitude" value="@r.Longitude.ToString(CultureInfo.InvariantCulture)" />
+                        <button class="list-group-item list-group-item-action">@r.Label</button>
+                    </form>
+                }
+            </div>
+        </div>
+    </div>
+    <div class="col-lg-6">
+        <div class="card p-4">
+            <h2 class="h5">Dados de exemplo</h2>
+            <p class="text-muted">Carrega 27 peças fictícias e cerca de 45 dias de histórico, para testar os looks e o dashboard antes de cadastrar as suas roupas.</p>
+            <div class="d-flex gap-2">
+                <form method="post" asp-page-handler="LoadDemo"><button class="btn btn-accent">Carregar exemplo</button></form>
+                <form method="post" asp-page-handler="RemoveDemo"><button class="btn btn-outline-danger">Remover exemplo</button></form>
+            </div>
+        </div>
+    </div>
+    <div class="col-lg-6">
+        <div class="card p-4">
+            <h2 class="h5">Retocar fotos</h2>
+            <p class="text-muted">
+                Toda foto nova é endireitada, recortada em volta da peça e centralizada num quadrado de fundo clarinho. O original fica guardado.
+                @if (Model.AiBackgroundRemoval)
+                {
+                    <span>O fundo é removido por uma IA que roda no seu próprio PC (nenhuma foto sai da sua máquina).</span>
+                }
+                else
+                {
+                    <span>A remoção de fundo por IA está desligada, só o recorte automático é usado.</span>
+                }
+            </p>
+            <form method="post" asp-page-handler="ReprocessPhotos" onsubmit="this.querySelector('button').disabled=true;this.querySelector('button').textContent='Retocando… pode levar alguns minutos'">
+                <button class="btn btn-accent">Retocar todas as fotos de novo</button>
+            </form>
+        </div>
+    </div>
+</div>
