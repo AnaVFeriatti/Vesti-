@@ -20,6 +20,8 @@ public class IndexModel(
     /// <summary>Manual temperature, used when the user overrides it or the weather API is unreachable.</summary>
     [BindProperty(SupportsGet = true)] public double? Temp { get; set; }
     [BindProperty(SupportsGet = true)] public bool? Rain { get; set; }
+    /// <summary>"Me Surpreenda": random suggestions and the roulette spins by itself.</summary>
+    [BindProperty(SupportsGet = true)] public bool Surpresa { get; set; }
 
     public CityLocation City { get; private set; } = null!;
     public WeatherNow? Weather { get; private set; }
@@ -36,6 +38,7 @@ public class IndexModel(
 
     public async Task OnGetAsync(CancellationToken ct)
     {
+        if (Surpresa && Seed == 0) Seed = Random.Shared.Next(1, 100_000);
         City = await settings.GetCityAsync();
         Weather = await weather.GetCurrentAsync(City.Latitude, City.Longitude, ct);
         UsedTemperature = Temp ?? Weather?.DressingTemperature ?? 24;

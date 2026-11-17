@@ -16,7 +16,7 @@
 </head>
 <body>
     <a class="skip-link" href="#conteudo">Pular para o conteúdo</a>
-    <nav class="navbar navbar-expand-lg app-nav" aria-label="Menu principal">
+    <nav class="navbar navbar-expand-xl app-nav" aria-label="Menu principal">
         <div class="container">
             <a class="navbar-brand fw-bold" asp-page="/Index" aria-label="Vestiê, página inicial"><img src="~/img/flower-rose.svg" alt="" class="brand-flower" width="30" height="30" /> Vestiê</a>
             <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#nav"
@@ -26,17 +26,20 @@
             <div class="collapse navbar-collapse" id="nav">
                 @{
                     var current = ViewContext.RouteData.Values["page"]?.ToString() ?? "";
-                    string Active(string page) => string.Equals(current, page, StringComparison.OrdinalIgnoreCase) ? "active" : "";
+                    var surprise = Context.Request.Query.ContainsKey("surpresa");
+                    string Active(string page, string? query = null) =>
+                        string.Equals(current, page, StringComparison.OrdinalIgnoreCase) && (query != null) == surprise ? "active" : "";
+                    string Href(NavMenu.Link l) => Url.Page(l.Page) + (l.Query is null ? "" : "?" + l.Query);
                     var toolsActive = NavMenu.Tools.SelectMany(g => g.Links).Any(l => l.Page == current && l.Page != "/Settings");
                 }
                 <ul class="navbar-nav me-auto">
                     @foreach (var l in NavMenu.Main)
                     {
-                        <li class="nav-item"><a class="nav-link @Active(l.Page)" asp-page="@l.Page" aria-current="@(Active(l.Page) != "" ? "page" : null)"><partial name="_Icon" model="l.Icon" /> @l.Label</a></li>
+                        <li class="nav-item"><a class="nav-link @Active(l.Page, l.Query)" href="@Href(l)" title="@l.Hint" aria-current="@(Active(l.Page, l.Query) != "" ? "page" : null)"><partial name="_Icon" model="l.Icon" /> @l.Label</a></li>
                     }
                     <li class="nav-item dropdown">
                         <a class="nav-link dropdown-toggle @(toolsActive ? "active" : "")" href="#" id="toolsToggle" role="button" data-bs-toggle="dropdown" data-bs-auto-close="outside" aria-expanded="false"><partial name="_Icon" model="@("tools")" /> Ferramentas</a>
-                        <div class="dropdown-menu dropdown-menu-lg-end tools-menu" aria-labelledby="toolsToggle">
+                        <div class="dropdown-menu dropdown-menu-xl-end tools-menu" aria-labelledby="toolsToggle">
                             @foreach (var g in NavMenu.Tools)
                             {
                                 <div class="tools-group">
@@ -54,7 +57,7 @@
                     </li>
                 </ul>
                 <ul class="navbar-nav">
-                    <li class="nav-item"><a class="nav-link @Active("/Settings")" asp-page="/Settings" aria-current="@(Active("/Settings") != "" ? "page" : null)"><partial name="_Icon" model="@("gear")" /> Configurações</a></li>
+                    <li class="nav-item"><a class="nav-link @Active("/Settings")" asp-page="/Settings" aria-current="@(Active("/Settings") != "" ? "page" : null)"><partial name="_Icon" model="@("user")" /> @NavMenu.AboutMe</a></li>
                 </ul>
             </div>
         </div>

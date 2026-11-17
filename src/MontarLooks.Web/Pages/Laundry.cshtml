@@ -1,10 +1,10 @@
 @page
 @model LaundryModel
-@{ ViewData["Title"] = "Lavanderia"; }
+@{ ViewData["Title"] = "Cesto de Roupa"; }
 
 <div class="d-flex flex-wrap justify-content-between align-items-end gap-3 mb-3">
     <div>
-        <h1 class="h3 mb-1">Lavanderia</h1>
+        <h1 class="h3 mb-1">Cesto de Roupa</h1>
         <p class="text-muted mb-0">Peça no cesto não aparece nas sugestões até você marcar que lavou. Toque numa peça para mandar para o cesto ou tirar de lá.</p>
     </div>
     @if (Model.Dirty.Count > 0)
@@ -20,7 +20,7 @@
 }
 @if (Model.Dirty.Count + Model.Clean.Count == 0)
 {
-    <p class="text-muted">Nenhuma peça no guarda-roupa ainda. <a asp-page="/Wardrobe/Edit">Cadastre a primeira</a> ou carregue o exemplo em <a asp-page="/Settings">Configurações</a>.</p>
+    <p class="text-muted">Nenhuma peça no guarda-roupa ainda. <a asp-page="/Wardrobe/Edit">Cadastre a primeira</a> ou carregue o exemplo em <a asp-page="/Settings">Sobre Mim</a>.</p>
 }
 <div class="wardrobe-grid mb-4">
     @foreach (var i in Model.Dirty)

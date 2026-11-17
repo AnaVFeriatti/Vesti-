@@ -3,15 +3,24 @@ namespace MontarLooks.Web.Models;
 /// <summary>Single source of truth for the app menu: every page is listed once, grouped, with one icon style.</summary>
 public static class NavMenu
 {
-    public record Link(string Page, string Label, string Icon, string Hint);
+    /// <param name="Query">Optional query string (e.g. "surpresa=1") for links that open a page in a special mode.</param>
+    public record Link(string Page, string Label, string Icon, string Hint, string? Query = null);
     public record Group(string Title, Link[] Links);
+
+    /// <summary>Query string of the "Me Surpreenda" link: opens the look page with a random seed and spins the roulette.</summary>
+    public const string SurpriseQuery = "surpresa=true";
+
+    /// <summary>Label of the settings/profile page, shown at the right of the top bar.</summary>
+    public const string AboutMe = "Sobre Mim";
 
     /// <summary>Always visible in the top bar.</summary>
     public static readonly Link[] Main =
     [
-        new("/Index", "Look do dia", "sparkle", "Sugestões para hoje"),
-        new("/Wardrobe/Index", "Guarda-roupa", "hanger", "Suas peças"),
-        new("/Planner", "Semana", "calendar", "Looks de segunda a sexta"),
+        new("/Index", "Meu Ateliê", "sparkle", "Look do dia e provador"),
+        new("/Wardrobe/Index", "Meu Closet", "hanger", "Suas peças"),
+        new("/Planner", "Agenda Fashion", "calendar", "Looks de segunda a sexta"),
+        new("/Index", "Me Surpreenda", "dice", "Um look sorteado na roleta", SurpriseQuery),
+        new("/Laundry", "Cesto de Roupa", "drop", "Peças sujas saem das sugestões"),
     ];
 
     /// <summary>Inside the "Ferramentas" menu.</summary>
@@ -19,7 +28,6 @@ public static class NavMenu
     [
         new("Planejar", [
             new("/Travel", "Mala de viagem", "suitcase", "Mala enxuta que combina"),
-            new("/Laundry", "Lavanderia", "drop", "Peças sujas saem das sugestões"),
         ]),
         new("Entender o guarda-roupa", [
             new("/Capsule", "Cápsula e lacunas", "grid", "O que rende e o que falta"),
@@ -28,7 +36,7 @@ public static class NavMenu
         ]),
         new("Você", [
             new("/Palette", "Paleta pessoal", "palette", "Cores que te iluminam"),
-            new("/Settings", "Provador e preferências", "user", "Avatar, frio, regras por ocasião"),
+            new("/Settings", AboutMe, "user", "Provador, frio, regras por ocasião"),
         ]),
         new("Resumos", [
             new("/Wrapped", "Wrapped do mês", "star", "Seu mês em stories"),

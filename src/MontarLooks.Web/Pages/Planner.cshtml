@@ -2,7 +2,7 @@
 @model PlannerModel
 @using System.Globalization
 @{
-    ViewData["Title"] = "Semana";
+    ViewData["Title"] = "Agenda Fashion";
     var inv = CultureInfo.InvariantCulture;
     var occasions = Enum.GetValues<Occasion>();
     var first = Model.Days.First().Plan.Date;
@@ -15,7 +15,7 @@
 
 <div class="d-flex flex-wrap justify-content-between align-items-end gap-3 mb-3">
     <div>
-        <h1 class="h3 mb-1">Planejador da semana</h1>
+        <h1 class="h3 mb-1">Agenda Fashion</h1>
         <p class="text-muted mb-0">
             Um look por dia, de @first.ToString("dd/MM") a @last.ToString("dd/MM"), com a previsão de @Model.City.Name
             (<a asp-page="/Settings" class="link-secondary">trocar cidade</a>).
@@ -51,7 +51,7 @@
             <button class="btn btn-outline-secondary" asp-page-handler="Save">Salvar agenda</button>
             <span class="small text-muted ms-md-2">
                 Escreva a agenda de cada dia (ex.: “reunião com cliente”, “academia”, “jantar”) e eu escolho a ocasião.
-                Sem repetir peça principal na semana e sem peças na lavanderia.
+                Sem repetir peça principal na semana e sem peças no Cesto de Roupa.
             </span>
         </div>
     </div>
@@ -128,7 +128,7 @@
                     @if (p.Title != null) { <div class="look-title small mb-1">@p.Title</div> }
                     @if (d.Items.Any(it => Model.Dirty.Contains(it.Id)))
                     {
-                        <div class="small text-muted mb-1">Tem peça no cesto: lave antes ou <a asp-page="/Laundry">confira a lavanderia</a>.</div>
+                        <div class="small text-muted mb-1">Tem peça no cesto: lave antes ou <a asp-page="/Laundry">confira o Cesto de Roupa</a>.</div>
                     }
                     <div class="small text-muted mb-2">Montado para @d.DressingC.ToString("0.#")°C@(d.Rainy ? ", com chuva" : "").</div>
                 }

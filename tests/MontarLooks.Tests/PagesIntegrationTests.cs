@@ -136,4 +136,23 @@ public class PagesIntegrationTests(AppFactory factory) : IClassFixture<AppFactor
         Assert.Equal("Microsoft.EntityFrameworkCore.Sqlite", db.Database.ProviderName);
         Assert.StartsWith(factory.Root, db.Database.GetDbConnection().DataSource);
     }
+
+    [Fact]
+    public async Task Menu_uses_the_new_names_and_me_surpreenda_spins_the_roulette()
+    {
+        var client = factory.CreateClient(new WebApplicationFactoryClientOptions { AllowAutoRedirect = false });
+        await LoadDemoThroughSettingsAsync(client);
+
+        var home = await client.GetStringAsync("/");
+        foreach (var name in new[] { "Meu Ateliê", "Agenda Fashion", "Meu Closet", "Sobre Mim", "Me Surpreenda", "Cesto de Roupa" })
+            Assert.Contains(name, WebUtility.HtmlDecode(home));
+        Assert.Contains("href=\"/?surpresa=true\"", home);
+        Assert.DoesNotContain("data-autospin", home);
+
+        var surprise = await client.GetStringAsync("/?surpresa=true");
+        Assert.Contains("<title>Me Surpreenda", surprise);
+        Assert.Contains("data-autospin=\"true\"", surprise);
+        // Only the "Me Surpreenda" link is highlighted, not "Meu Ateliê" (same page, other mode).
+        Assert.Single(Regex.Matches(surprise, "nav-link active"));
+    }
 }

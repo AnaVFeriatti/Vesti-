@@ -109,7 +109,7 @@ a:hover { color: var(--pink); }
 .app-nav .navbar-brand:hover { color: var(--pink-dark); }
 .brand-flower { width: 30px; height: 30px; transition: transform .6s ease; }
 .navbar-brand:hover .brand-flower { transform: rotate(72deg); }
-.app-nav .nav-link { color: var(--brown); font-weight: 600; border-radius: 999px; padding-inline: .9rem !important; }
+.app-nav .nav-link { color: var(--brown); font-weight: 600; border-radius: 999px; padding-inline: .7rem !important; }
 .app-nav .nav-link:hover, .app-nav .nav-link:focus-visible { color: var(--pink); background: var(--pink-soft); }
 .app-nav .nav-link.active { color: var(--pink); background: var(--pink-soft); }
 .navbar-toggler { border-color: var(--line); }
@@ -304,9 +304,9 @@ summary { color: var(--purple) !important; cursor: pointer; }
 .app-nav { z-index: 1030; position: sticky; top: 0; }
 .app-main { padding-top: 2.4rem; }           /* espaço para a trepadeira (que desce 18px) */
 .ico { vertical-align: -.2em; flex-shrink: 0; }
-.app-nav .nav-link { display: inline-flex; align-items: center; gap: .35rem; }
+.app-nav .nav-link { display: inline-flex; align-items: center; gap: .35rem; white-space: nowrap; }
 .tools-menu { border: 1px solid var(--line); border-radius: 18px; padding: .6rem; box-shadow: 0 16px 40px -12px rgba(123,63,160,.28); }
-@media (min-width: 992px) {
+@media (min-width: 1200px) {
     .tools-menu { display: none; grid-template-columns: repeat(2, minmax(240px, 1fr)); gap: .25rem .75rem; min-width: 560px; }
     .tools-menu.show { display: grid; }
 }
@@ -344,8 +344,8 @@ main:focus { outline: none; }
 
 .visually-hidden-focusable:not(:focus):not(:focus-within) { position: absolute !important; }
 
-/* ---- navegação no celular (menu recolhido) ---- */
-@media (max-width: 991.98px) {
+/* ---- navegação no celular/tablet (menu recolhido: são 7 itens com os nomes novos) ---- */
+@media (max-width: 1199.98px) {
     .app-nav .navbar-collapse { max-height: calc(100dvh - 64px); overflow-y: auto; overscroll-behavior: contain; padding-bottom: .75rem; }
     .app-nav .nav-link { min-height: 44px; width: 100%; }
     .app-nav .navbar-nav { gap: .15rem; padding-top: .5rem; }

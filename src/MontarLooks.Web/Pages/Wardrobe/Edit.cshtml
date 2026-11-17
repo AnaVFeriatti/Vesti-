@@ -5,7 +5,7 @@
     ViewData["Title"] = isNew ? "Nova peça" : Model.Item.Name;
 }
 
-<a asp-page="Index" class="small text-muted">← Guarda-roupa</a>
+<a asp-page="Index" class="small text-muted">← Meu Closet</a>
 <h1 class="h3 my-3">@(isNew ? "Nova peça" : Model.Item.NeedsReview ? "Completar peça" : "Editar peça")</h1>
 
 <div class="row g-4">

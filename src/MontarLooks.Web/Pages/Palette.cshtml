@@ -180,7 +180,7 @@
     <h2 id="pal-drape-title" class="h5">🪞 Teste do tecido no rosto</h2>
     <p class="small text-muted">Consultoras seguram tecidos coloridos perto do rosto. Aqui a borda faz esse papel: compare os dois lados e veja qual deixa a pele mais uniforme, os olhos mais brilhantes e as olheiras mais leves.</p>
     <div class="pal-drape-empty alert alert-light" @(Model.FacePhoto != null ? "hidden" : null)>
-        Escolha uma foto do rosto em “Ajuda da foto” logo abaixo (ou cadastre uma em <a asp-page="/Settings">Configurações</a>) para fazer o teste.
+        Escolha uma foto do rosto em “Ajuda da foto” logo abaixo (ou cadastre uma em <a asp-page="/Settings">Sobre Mim</a>) para fazer o teste.
     </div>
     <div class="pal-drape" @(Model.FacePhoto == null ? "hidden" : null)>
         <div class="pal-drape-modes" role="group" aria-label="Comparação">
