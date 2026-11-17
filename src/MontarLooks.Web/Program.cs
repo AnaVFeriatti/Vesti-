@@ -36,6 +36,7 @@ builder.Services.AddScoped<WishlistService>();
 builder.Services.AddScoped<WrappedService>();
 builder.Services.AddScoped<PlannerService>();
 builder.Services.AddScoped<TravelService>();
+builder.Services.AddScoped<ClosetBackupService>();
 
 var app = builder.Build();
 

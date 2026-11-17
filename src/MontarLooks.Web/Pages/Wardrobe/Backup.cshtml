@@ -1,0 +1,71 @@
+@page
+@model MontarLooks.Web.Pages.Wardrobe.BackupModel
+@{ ViewData["Title"] = "Exportar e importar closet"; }
+
+<a asp-page="Index" class="small text-muted">← Meu Closet</a>
+<h1 class="h3 my-3">🌸 Exportar e importar closet</h1>
+
+<div class="row g-4">
+    <div class="col-lg-5">
+        <div class="card p-4 h-100">
+            <h2 class="h5">Exportar closet</h2>
+            <p class="text-muted">
+                Baixa um único arquivo <strong>.zip</strong> com a planilha <code>pecas.csv</code> (todas as peças, ativas e desativadas,
+                com todos os detalhes) e a pasta <code>fotos/</code> com a foto de cada peça. Serve de cópia de segurança
+                ou para levar o closet para outro computador.
+            </p>
+            <a asp-page-handler="Export" class="btn btn-accent align-self-start"><partial name="_Icon" model="@("download")" /> Exportar closet</a>
+        </div>
+    </div>
+
+    <div class="col-lg-7">
+        <form method="post" enctype="multipart/form-data" class="card p-4 h-100">
+            <h2 class="h5">Importar closet</h2>
+            <div asp-validation-summary="All" class="text-danger"></div>
+            <p class="text-muted mb-2">Envie o .zip exportado pelo Vestiê (até 200 MB). Como funciona:</p>
+            <ul class="text-muted small">
+                <li>Peça cujo <strong>id</strong> já existe aqui é <strong>atualizada</strong> (detalhes e foto, se a foto vier no zip).</li>
+                <li>Peça com id vazio ou que não existe aqui é <strong>criada</strong> com um id novo.</li>
+                <li><strong>Nada é apagado</strong>: peças que não estão no arquivo continuam como estão.</li>
+                <li>Linhas com problema (nome vazio, categoria inválida...) são puladas e listadas no resumo.</li>
+            </ul>
+            <div class="mb-3">
+                <label class="form-label" for="arquivo">Arquivo .zip</label>
+                <input id="arquivo" type="file" name="Arquivo" accept=".zip,application/zip" class="form-control" required />
+            </div>
+            <button class="btn btn-accent align-self-start"><partial name="_Icon" model="@("upload")" /> Importar closet</button>
+        </form>
+    </div>
+</div>
+
+@if (Model.Result is { Ok: true } r)
+{
+    <div class="card p-4 mt-4">
+        <h2 class="h5">Resumo da importação 🌷</h2>
+        <ul class="mb-2">
+            <li><strong>@r.Created</strong> peça(s) criada(s)</li>
+            <li><strong>@r.Updated</strong> peça(s) atualizada(s)</li>
+            <li><strong>@r.PhotosImported</strong> foto(s) importada(s)</li>
+            <li><strong>@r.Skipped.Count</strong> linha(s) ignorada(s)</li>
+        </ul>
+        @if (r.Skipped.Count > 0)
+        {
+            <details class="mb-2" open="@(r.Skipped.Count <= 10)">
+                <summary>Linhas ignoradas</summary>
+                <ul class="small text-danger mb-0">
+                    @foreach (var s in r.Skipped) { <li>@s</li> }
+                </ul>
+            </details>
+        }
+        @if (r.Warnings.Count > 0)
+        {
+            <details>
+                <summary>Avisos (a peça entrou, a foto não)</summary>
+                <ul class="small text-muted mb-0">
+                    @foreach (var w in r.Warnings) { <li>@w</li> }
+                </ul>
+            </details>
+        }
+        <a asp-page="Index" class="btn btn-outline-secondary align-self-start mt-3">Ver Meu Closet</a>
+    </div>
+}
