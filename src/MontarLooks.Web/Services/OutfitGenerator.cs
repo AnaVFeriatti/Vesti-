@@ -179,7 +179,12 @@ public class OutfitGenerator
         var tops = Pool(items.Where(i => i.Category == Category.Top), MaxPerCategory);
         var bottoms = Pool(items.Where(i => i.Category == Category.Bottom), MaxPerCategory);
         var onePieces = Pool(items.Where(i => i.Category == Category.OnePiece), MaxPerCategory);
-        var shoes = Pool(items.Where(i => i.Category == Category.Shoes), MaxPerCategory);
+        // Boots follow the REAL temperature (feet heat up even for someone who feels cold):
+        // on a warm day they only show up when there is no lighter pair to wear.
+        var shoeSource = items.Where(i => i.Category == Category.Shoes).ToList();
+        if (req.TemperatureC >= 24 && shoeSource.Any(i => i.Warmth < 4))
+            shoeSource = shoeSource.Where(i => i.Warmth < 4).ToList();
+        var shoes = Pool(shoeSource, MaxPerCategory);
         var outer = Pool(items.Where(i => i.Category == Category.Outerwear), MaxPerCategory);
         var accessories = Pool(items.Where(i => i.Category == Category.Accessory), MaxPerCategory);
 

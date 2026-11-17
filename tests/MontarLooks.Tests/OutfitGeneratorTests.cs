@@ -232,4 +232,31 @@ public class OutfitGeneratorTests
             Assert.True(shoes.Count(x => x.SubType is "bota" or "coturno") <= 1, $"seed {seed}: {string.Join(", ", shoes.Select(x => x.Name))}");
         }
     }
+
+    [Fact]
+    public void Boots_follow_the_real_temperature_even_for_someone_who_feels_cold()
+    {
+        var w = new List<ClothingItem>
+        {
+            Item("Camisa branca", Category.Top, "branco", Style.SmartCasual, 2, 4),
+            Item("Blusa gola alta preta", Category.Top, "preto", Style.SmartCasual, 3, 3),
+            Item("Calça preta reta", Category.Bottom, "preto", Style.SmartCasual, 3, 3),
+            Item("Calça jeans reta", Category.Bottom, "jeans", Style.Casual, 3, 2),
+            Item("Bota preta cano alto", Category.Shoes, "preto", Style.SmartCasual, 4, 3),
+            Item("Mocassim preto", Category.Shoes, "preto", Style.SmartCasual, 2, 3),
+            Item("Tênis All Star branco", Category.Shoes, "branco", Style.Casual, 2, 1),
+        };
+        w[4].SubType = "bota"; w[5].SubType = "mocassim"; w[6].SubType = "tênis";
+        // Sente frio abaixo de 25°C: 27°C reais "parecem" frescos, mas o pé esquenta na bota mesmo assim.
+        var prefs = new StylePreferences { ColdBelowC = 25 };
+        prefs.Rules[Occasion.Work] = [DressRule.NoStraps, DressRule.NoNeckline, DressRule.NoSkirts, DressRule.NoOpenShoes];
+        for (var seed = 0; seed < 5; seed++)
+        {
+            var hot = _gen.Suggest(w, new Dictionary<int, DateOnly>(), new(Occasion.Work, 27, false, Today, 3, seed, prefs));
+            Assert.NotEmpty(hot);
+            Assert.DoesNotContain(hot.SelectMany(l => l.Items), i => i.SubType == "bota");
+        }
+        var cold = _gen.Suggest(w, new Dictionary<int, DateOnly>(), new(Occasion.Work, 11, false, Today, 3, 0, prefs));
+        Assert.Contains(cold.SelectMany(l => l.Items), i => i.SubType == "bota");
+    }
 }
