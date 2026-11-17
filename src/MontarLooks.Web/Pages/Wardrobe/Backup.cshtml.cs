@@ -17,9 +17,10 @@ public class BackupModel(ClosetBackupService backup, ILogger<BackupModel> log) :
 
     public async Task<IActionResult> OnGetExportAsync(CancellationToken ct)
     {
-        using var buffer = new MemoryStream();
-        await backup.ExportZipAsync(buffer, ct);
-        return File(buffer.ToArray(), "application/zip", $"vestie-closet-{DateTime.Now:yyyy-MM-dd}.zip");
+        var buffer = new MemoryStream(); // disposed by the FileStreamResult
+        await backup.ExportZipAsync(buffer, ct: ct);
+        buffer.Position = 0;
+        return File(buffer, "application/zip", $"vestie-closet-{DateTime.Now:yyyy-MM-dd}.zip");
     }
 
     public async Task<IActionResult> OnPostAsync(CancellationToken ct)

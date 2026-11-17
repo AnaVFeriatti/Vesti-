@@ -9,7 +9,7 @@ namespace MontarLooks.Web.Services;
 
 /// <summary>
 /// Closet backup: one ZIP with "pecas.csv" (every piece, every column) and "fotos/" (the served photo of each piece).
-/// The same CSV format is used by the plain "Exportar CSV" button.
+/// The same CSV format (and ZIP layout) is used by the "Exportar CSV" / "Exportar CSV + fotos" buttons of Meu Closet.
 ///
 /// Import rule: a row whose id already exists is UPDATED (fields, and the photo when the ZIP has one);
 /// a row with an empty or unknown id is CREATED with a new id from the database (ids are identity columns,
@@ -36,37 +36,48 @@ public class ClosetBackupService(AppDbContext db, PhotoStorage photos)
 
     // ------------------------------------------------------------------ export
 
-    /// <summary>CSV of every piece (active and inactive). The "foto" column is the file name used inside "fotos/".</summary>
-    public async Task<string> ExportCsvAsync(CancellationToken ct = default)
+    private static readonly UTF8Encoding Utf8Bom = new(encoderShouldEmitUTF8Identifier: true);
+
+    /// <summary>CSV of every piece (active and inactive) as UTF-8 with BOM (Excel-friendly).
+    /// The "foto" column is the file name used inside "fotos/" (empty when the photo file is missing).</summary>
+    public async Task<byte[]> ExportCsvBytesAsync(CancellationToken ct = default)
     {
         var rows = await LoadForExportAsync(ct);
-        return BuildCsv(rows.Select(r => (r.Item, r.TimesWorn, PhotoEntryName(r.Item))));
+        var csv = BuildCsv(rows.Select(r => (r.Item, r.TimesWorn, ExistingPhoto(r.Item)?.EntryName)));
+        return [.. Utf8Bom.GetPreamble(), .. Utf8Bom.GetBytes(csv)];
     }
 
-    /// <summary>ZIP with "pecas.csv" and "fotos/&lt;id-nome&gt;.ext". Pieces whose photo file is missing get an empty "foto".</summary>
-    public async Task ExportZipAsync(Stream output, CancellationToken ct = default)
+    /// <summary>ZIP with <paramref name="csvEntryName"/> and "fotos/&lt;id-nome&gt;.ext". Pieces whose photo file is missing get an empty "foto".</summary>
+    public async Task ExportZipAsync(Stream output, string csvEntryName = CsvEntry, CancellationToken ct = default)
     {
         var rows = await LoadForExportAsync(ct);
         using var zip = new ZipArchive(output, ZipArchiveMode.Create, leaveOpen: true);
         var csvRows = new List<(ClothingItem, int, string?)>();
         foreach (var (item, worn) in rows)
         {
-            var entryName = PhotoEntryName(item);
-            var path = PhotoPath(item.PhotoFileName);
-            if (entryName == null || path == null || !File.Exists(path)) { csvRows.Add((item, worn, null)); continue; }
-
-            var entry = zip.CreateEntry(PhotosFolder + entryName, CompressionLevel.NoCompression); // already compressed
-            entry.LastWriteTime = File.GetLastWriteTime(path);
-            await using (var src = File.OpenRead(path))
-            await using (var dst = entry.Open())
+            var photo = ExistingPhoto(item);
+            if (photo is var (entryName, path))
+            {
+                var entry = zip.CreateEntry(PhotosFolder + entryName, CompressionLevel.NoCompression); // already compressed
+                entry.LastWriteTime = File.GetLastWriteTime(path);
+                await using var src = File.OpenRead(path);
+                await using var dst = entry.Open();
                 await src.CopyToAsync(dst, ct);
-            csvRows.Add((item, worn, entryName));
+            }
+            csvRows.Add((item, worn, photo?.EntryName));
         }
 
-        var csv = zip.CreateEntry(CsvEntry, CompressionLevel.Optimal);
-        await using var w = csv.Open();
-        var bytes = Encoding.UTF8.GetPreamble().Concat(Encoding.UTF8.GetBytes(BuildCsv(csvRows))).ToArray();
-        await w.WriteAsync(bytes, ct);
+        var csv = zip.CreateEntry(csvEntryName, CompressionLevel.Optimal);
+        await using var w = new StreamWriter(csv.Open(), Utf8Bom);
+        await w.WriteAsync(BuildCsv(csvRows).AsMemory(), ct);
+    }
+
+    /// <summary>Export name and disk path of the piece's photo, or null when it has none or the file is missing.</summary>
+    private (string EntryName, string Path)? ExistingPhoto(ClothingItem item)
+    {
+        var entryName = PhotoEntryName(item);
+        var path = PhotoPath(item.PhotoFileName);
+        return entryName != null && path != null && File.Exists(path) ? (entryName, path) : null;
     }
 
     private async Task<List<(ClothingItem Item, int TimesWorn)>> LoadForExportAsync(CancellationToken ct) =>
@@ -211,9 +222,9 @@ public class ClosetBackupService(AppDbContext db, PhotoStorage photos)
 
                 ClothingItem target;
                 var idText = Get("id");
-                if (idText.Length > 0 && !int.TryParse(idText, NumberStyles.Integer, Inv, out _))
-                { result.Skipped.Add($"Linha {line}: id \"{idText}\" não é um número."); continue; }
                 var hasId = int.TryParse(idText, NumberStyles.Integer, Inv, out var id);
+                if (idText.Length > 0 && !hasId)
+                { result.Skipped.Add($"Linha {line}: id \"{idText}\" não é um número."); continue; }
                 if (hasId && !seenIds.Add(id)) { result.Skipped.Add($"Linha {line}: id {id} repetido no arquivo."); continue; }
 
                 if (hasId && existing.TryGetValue(id, out var current))
