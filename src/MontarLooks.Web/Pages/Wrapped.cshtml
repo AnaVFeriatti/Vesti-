@@ -2,7 +2,7 @@
 @model WrappedModel
 @{
     var d = Model.Data;
-    ViewData["Title"] = $"Wrapped · {d.Label}";
+    ViewData["Title"] = $"Retrospectiva · {d.Label}";
     string Plural(int n, string one, string many) => n == 1 ? $"1 {one}" : $"{n} {many}";
     string Ink(string hex)
     {
@@ -17,7 +17,7 @@
 
 <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
     <div>
-        <h1 class="h3 mb-1">Wrapped do mês</h1>
+        <h1 class="h3 mb-1">Retrospectiva do mês</h1>
         <p class="text-muted mb-0">O resumo divertido dos looks que você registrou no mês.</p>
     </div>
     <nav class="d-flex align-items-center gap-2" aria-label="Escolher mês">
@@ -51,7 +51,7 @@
     <div class="card p-4 text-center wrapped-empty">
         <div class="empty-emoji" aria-hidden="true">🌙</div>
         <p class="fw-semibold mb-1">@d.Label ainda não tem looks registrados.</p>
-        <p class="text-muted small">Registre o que você vestiu na página inicial e o seu Wrapped aparece aqui, cheio de surpresas.</p>
+        <p class="text-muted small">Registre o que você vestiu na página inicial e a sua retrospectiva aparece aqui, cheio de surpresas.</p>
         @if (Model.MonthsWithData.Count > 0)
         {
             <p class="small mb-2">Que tal relembrar um mês com looks?</p>
@@ -72,7 +72,7 @@
 
 <div class="wrapped" data-wrapped>
     <div class="wrapped-progress" aria-hidden="true"></div>
-    <div class="wrapped-stage" tabindex="0" aria-roledescription="carrossel" aria-label="Wrapped de @d.Label. Toque ou use as setas para avançar." aria-live="polite">
+    <div class="wrapped-stage" tabindex="0" aria-roledescription="carrossel" aria-label="Retrospectiva de @d.Label. Toque ou use as setas para avançar." aria-live="polite">
 
         <section class="wslide wslide-intro" aria-label="Abertura">
             <div class="wslide-kicker">Vestiê apresenta</div>

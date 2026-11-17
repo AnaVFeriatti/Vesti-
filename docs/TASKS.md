@@ -18,8 +18,5 @@ e o resumo final ficam com o agente principal. Nada de sudo, docker ou push dura
 |---|---|---|
 | 7 | Regra da bota coberta por teste: com temperatura real ≥ 24°C a bota sai das sugestões quando há outro calçado (antes, a variação de calçado podia trazê-la de volta) | feito |
 | 8 | Menu com os nomes novos: Meu Ateliê (look do dia/provador), Meu Closet (guarda-roupa), Agenda Fashion (semana), Me Surpreenda (look sorteado, roleta gira sozinha), Cesto de Roupa (lavanderia), Sobre Mim (configurações). Títulos, links e README acompanham | feito |
-| 9 | Fotos ainda tortas: saia de tweed pink e blusa preta com babados (dados no Postgres/uploads, fora do git; ajustar pela tela de edição com ↺ ↻) | pendente: Hoffmann |
-
-Dúvidas para o Hoffmann:
-- "Ferramentas" continua com esse nome (Mala de viagem, Cápsula, Desejos, Desapego, Paleta, Wrapped, Histórico, Analytics). Quer um nome novo no mesmo estilo?
-- Os rótulos antigos (Look do dia, Guarda-roupa, Semana, Lavanderia, Configurações) saíram de vez; se quiser um subtítulo explicando cada nome, é só pedir.
+| 9 | Fotos ainda tortas: saia de tweed pink e blusa preta com babados | feito (girada e limpa pela tela de edição) |
+| 10 | Tudo em português: "Ferramentas" → Mais Mimos, Wrapped → Retrospectiva do mês, Analytics → Estatísticas, Streetwear → Urbano (nomes escolhidos pelo Hoffmann ficam) | feito |

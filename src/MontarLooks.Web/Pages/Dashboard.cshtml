@@ -2,7 +2,7 @@
 @model DashboardModel
 @using System.Text.Json
 @{
-    ViewData["Title"] = "Analytics";
+    ViewData["Title"] = "Estatísticas";
     var s = Model.Stats;
     object Bars(IEnumerable<Slice> xs) => new { labels = xs.Select(x => x.Label), values = xs.Select(x => x.Value), colors = xs.Select(x => x.Color) };
     var chartData = new
@@ -17,7 +17,7 @@
     };
 }
 
-<h1 class="h3 mb-4">Analytics do guarda-roupa</h1>
+<h1 class="h3 mb-4">Estatísticas do guarda-roupa</h1>
 
 @if (s.ActiveItems == 0)
 {

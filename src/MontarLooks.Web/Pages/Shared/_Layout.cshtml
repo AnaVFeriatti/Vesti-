@@ -38,7 +38,7 @@
                         <li class="nav-item"><a class="nav-link @Active(l.Page, l.Query)" href="@Href(l)" title="@l.Hint" aria-current="@(Active(l.Page, l.Query) != "" ? "page" : null)"><partial name="_Icon" model="l.Icon" /> @l.Label</a></li>
                     }
                     <li class="nav-item dropdown">
-                        <a class="nav-link dropdown-toggle @(toolsActive ? "active" : "")" href="#" id="toolsToggle" role="button" data-bs-toggle="dropdown" data-bs-auto-close="outside" aria-expanded="false"><partial name="_Icon" model="@("tools")" /> Ferramentas</a>
+                        <a class="nav-link dropdown-toggle @(toolsActive ? "active" : "")" href="#" id="toolsToggle" role="button" data-bs-toggle="dropdown" data-bs-auto-close="outside" aria-expanded="false"><partial name="_Icon" model="@("tools")" /> Mais Mimos</a>
                         <div class="dropdown-menu dropdown-menu-xl-end tools-menu" aria-labelledby="toolsToggle">
                             @foreach (var g in NavMenu.Tools)
                             {

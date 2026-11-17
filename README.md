@@ -41,7 +41,7 @@ Testes: `dotnet test` na raiz.
 | **Meu Closet** (guarda-roupa) | Peças com foto, categoria, tipo, cores, estilo, calor, formalidade, chuva, preço e detalhes (manga/alça, decote, comprimento, caimento, estampa, tecido, cintura). As fotos são tratadas por uma IA local (rembg): fundo removido, peça de pé, sem cabide. Na edição dá para girar, retocar de novo ou usar a foto original. |
 | **Agenda Fashion** (semana) | Planeja segunda a sexta com a previsão de cada dia e a agenda ("reunião", "academia", "jantar"...), sem repetir peça principal. |
 | **Cesto de Roupa** (lavanderia) | Peça suja fica no cesto e sai das sugestões até ser marcada como lavada. |
-| **Ferramentas** | Mala de viagem, Cápsula e lacunas ("uma calça bege renderia mais 21 looks"), Lista de desejos, Desapego (6 meses sem uso), Paleta pessoal (coloração em 12 estações, com teste de cores na foto), Wrapped do mês, Histórico (CSV) e Analytics. |
+| **Mais Mimos** | Mala de viagem, Cápsula e lacunas ("uma calça bege renderia mais 21 looks"), Lista de desejos, Desapego (6 meses sem uso), Paleta pessoal (coloração em 12 estações, com teste de cores na foto), Retrospectiva do mês, Histórico (CSV) e Estatísticas. |
 | **Sobre Mim** (configurações) | Provador (tom de pele, cabelo, fotos), "começo a sentir frio abaixo de X°C", regras por ocasião (ex.: trabalho sem alça, decote, saia ou sapato aberto), cidade, retoque de fotos e dados de exemplo. |
 
 ## Como o gerador de looks funciona
@@ -65,7 +65,7 @@ src/MontarLooks.Web/
   Models/      ClothingItem, Outfit, paleta de cores, enums (categoria, estilo, ocasião)
   Data/        AppDbContext (EF Core: PostgreSQL no Docker, SQLite local)
   Services/    OutfitGenerator, WeatherService (Open-Meteo), AnalyticsService, PhotoStorage, DemoData
-  Pages/       Razor Pages (Meu Ateliê, Meu Closet, Agenda Fashion, Cesto de Roupa, Sobre Mim, ferramentas)
+  Pages/       Razor Pages (Meu Ateliê, Meu Closet, Agenda Fashion, Cesto de Roupa, Sobre Mim, Mais Mimos)
 tests/MontarLooks.Tests/   testes do gerador de looks (xUnit)
 ```
 

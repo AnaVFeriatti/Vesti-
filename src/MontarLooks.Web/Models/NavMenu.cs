@@ -23,7 +23,7 @@ public static class NavMenu
         new("/Laundry", "Cesto de Roupa", "drop", "Peças sujas saem das sugestões"),
     ];
 
-    /// <summary>Inside the "Ferramentas" menu.</summary>
+    /// <summary>Inside the "Mais Mimos" menu.</summary>
     public static readonly Group[] Tools =
     [
         new("Planejar", [
@@ -39,9 +39,9 @@ public static class NavMenu
             new("/Settings", AboutMe, "user", "Provador, frio, regras por ocasião"),
         ]),
         new("Resumos", [
-            new("/Wrapped", "Wrapped do mês", "star", "Seu mês em stories"),
+            new("/Wrapped", "Retrospectiva do mês", "star", "Seu mês em destaques"),
             new("/History", "Histórico", "clock", "Looks usados"),
-            new("/Dashboard", "Analytics", "chart", "Números do guarda-roupa"),
+            new("/Dashboard", "Estatísticas", "chart", "Números do guarda-roupa"),
         ]),
     ];
 

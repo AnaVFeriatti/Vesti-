@@ -16,7 +16,7 @@ public enum Style
 {
     [Display(Name = "Casual")] Casual,
     [Display(Name = "Esportivo")] Sporty,
-    [Display(Name = "Streetwear")] Streetwear,
+    [Display(Name = "Urbano")] Streetwear,
     [Display(Name = "Social")] Formal,
     [Display(Name = "Esporte fino")] SmartCasual,
     [Display(Name = "Praia / Verão")] Beach,
