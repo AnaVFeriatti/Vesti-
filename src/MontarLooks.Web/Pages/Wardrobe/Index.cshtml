@@ -5,9 +5,11 @@
 
 <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
     <h1 class="h3 mb-0">Meu Closet <span class="text-muted fs-6">(@Model.Items.Count peças)</span></h1>
-    <div class="d-flex gap-2">
+    <div class="d-flex flex-wrap gap-2">
         <a asp-page-handler="Csv" class="btn btn-outline-secondary"><partial name="_Icon" model="@("download")" /> Exportar CSV</a>
-        <a asp-page-handler="Photos" class="btn btn-outline-secondary"><partial name="_Icon" model="@("download")" /> Exportar fotos</a>
+        <a asp-page-handler="Photos" class="btn btn-outline-secondary"><partial name="_Icon" model="@("download")" /> Exportar CSV + fotos (ZIP)</a>
+        <a asp-page="Backup" asp-page-handler="Export" class="btn btn-outline-secondary" title="ZIP com pecas.csv e todas as fotos, para guardar ou levar para outro computador"><partial name="_Icon" model="@("download")" /> Exportar closet</a>
+        <a asp-page="Backup" class="btn btn-outline-secondary" title="Trazer de volta um closet exportado"><partial name="_Icon" model="@("upload")" /> Importar closet</a>
         <a asp-page="Bulk" class="btn btn-outline-secondary">📷 Enviar várias fotos</a>
         <a asp-page="Edit" class="btn btn-accent">+ Nova peça</a>
     </div>
