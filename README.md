@@ -36,29 +36,25 @@ Testes: `dotnet test` na raiz.
 
 | Tela | O que faz |
 |---|---|
-| **Look do dia** | Busca o clima atual (Open-Meteo, sem chave de API), você escolhe a ocasião e recebe 3 looks diferentes, com explicação de por que combinam. "Vou usar este" salva no histórico. "Outras sugestões" sorteia novas combinações. |
-| **Guarda-roupa** | Cadastro com foto, categoria, tipo, cor, estilo, quanto esquenta (1-5), formalidade (1-5), se é boa para chuva e preço. Filtros por categoria/cor/nome. |
-| **Enviar várias fotos** | Envia todas as fotos de uma vez; cada uma vira uma peça "a completar", e o app te leva de uma em uma para preencher os detalhes. |
-| **Histórico** | Looks usados, com nota de 1 a 5 e **exportação CSV** (uma linha por peça usada, pronta para Excel / Power BI / pandas). |
-| **Analytics** | Peças mais/menos usadas, peças esquecidas há 30+ dias, cores do guarda-roupa vs. cores que você mais veste, looks por semana, temperatura média, ocasiões, tipos de combinação de cor e **custo por uso**. |
-| **Configurações** | Trocar a cidade (padrão: Ourinhos-SP) e carregar/remover dados de exemplo. |
+| **Look do dia** | Clima atual (Open-Meteo, sem chave), ocasião e 3 looks diferentes vestidos num **provador** (avatar ou foto de corpo inteiro), com o "por que combina". **Amei / Nunca mais** ensinam o motor; **Não sei o que vestir** sorteia na roleta; "Vou usar este" salva no histórico e pode mandar a blusa para a lavanderia. |
+| **Guarda-roupa** | Peças com foto, categoria, tipo, cores, estilo, calor, formalidade, chuva, preço e detalhes (manga/alça, decote, comprimento, caimento, estampa, tecido, cintura). As fotos são tratadas por uma IA local (rembg): fundo removido, peça de pé, sem cabide. Na edição dá para girar, retocar de novo ou usar a foto original. |
+| **Semana** | Planeja segunda a sexta com a previsão de cada dia e a agenda ("reunião", "academia", "jantar"...), sem repetir peça principal. |
+| **Ferramentas** | Mala de viagem, Lavanderia, Cápsula e lacunas ("uma calça bege renderia mais 21 looks"), Lista de desejos, Desapego (6 meses sem uso), Paleta pessoal (coloração em 12 estações, com teste de cores na foto), Wrapped do mês, Histórico (CSV) e Analytics. |
+| **Configurações** | Provador (tom de pele, cabelo, fotos), "começo a sentir frio abaixo de X°C", regras por ocasião (ex.: trabalho sem alça, decote, saia ou sapato aberto), cidade, retoque de fotos e dados de exemplo. |
 
 ## Como o gerador de looks funciona
 
-`src/MontarLooks.Web/Services/OutfitGenerator.cs` monta todas as combinações possíveis
-(parte de cima + parte de baixo, ou vestido/macacão, + calçado, + casaco opcional, + acessório opcional)
-e dá uma nota para cada uma:
+`src/MontarLooks.Web/Services/OutfitGenerator.cs` monta as combinações (parte de cima + de baixo ou peça única,
+camada opcional como cardigan, casaco, calçado e acessório) e dá uma nota para cada uma:
 
-1. **Temperatura**: usa a sensação térmica puxada para a mínima do dia e compara com o "calor" das peças.
-   Abaixo de 17°C exige casaco; acima de 24°C dispensa (a não ser que chova).
-2. **Ocasião**: formalidade e estilo esperados (ex.: trabalho = esporte fino/social; academia = só esportivo).
-3. **Harmonia de cores**: monocromático, neutro, ponto de cor, análogo (cores vizinhas) ou complementar
-   (opostas no círculo cromático). Combinações com muitas cores ou mais de uma estampa perdem pontos.
-4. **Chuva**: prefere calçado/casaco marcado como "bom para chuva".
-5. **Variedade**: evita peças usadas nos últimos dias e dá um bônus para peças esquecidas.
-6. **Criatividade**: um pouco de aleatoriedade, para cada sugestão ser diferente.
-
-Os 3 looks escolhidos sempre diferem entre si em pelo menos duas peças.
+1. **Regras da ocasião** (filtro duro): o que você marcou como proibido nunca aparece.
+2. **Temperatura pessoal**: usa a sensação térmica ajustada pelo seu "sinto frio abaixo de"; com manhã fria
+   e tarde quente sugere uma camada removível. Calçados seguem a temperatura real.
+3. **Ocasião**: formalidade e estilo esperados.
+4. **Cores**: neutros, ponto de cor, contraste claro-escuro, análogas, complementares, tom sobre tom e a sua paleta pessoal perto do rosto.
+5. **Proporção e detalhes**: volume em cima ou embaixo, cropped com cintura alta, uma estampa protagonista, tecido x clima.
+6. **Seu gosto**: combinações curtidas ganham pontos; "nunca mais" não volta.
+7. **Variedade**: evita peças recém-usadas, peças na lavanderia e repetir peça principal ou calçado entre as sugestões.
 
 ## Estrutura
 
