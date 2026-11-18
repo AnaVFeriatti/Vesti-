@@ -1,5 +1,5 @@
 # ---- build ----
-FROM mcr.microsoft.com/dotnet/sdk:8.0 AS build
+FROM mcr.microsoft.com/dotnet/sdk:10.0 AS build
 WORKDIR /src
 COPY src/MontarLooks.Web/MontarLooks.Web.csproj src/MontarLooks.Web/
 RUN dotnet restore src/MontarLooks.Web/MontarLooks.Web.csproj
@@ -7,7 +7,7 @@ COPY src/ src/
 RUN dotnet publish src/MontarLooks.Web/MontarLooks.Web.csproj -c Release -o /app/publish --no-restore
 
 # ---- runtime ----
-FROM mcr.microsoft.com/dotnet/aspnet:8.0
+FROM mcr.microsoft.com/dotnet/aspnet:10.0
 WORKDIR /app
 ENV ASPNETCORE_URLS=http://+:8080 \
     TZ=America/Sao_Paulo \

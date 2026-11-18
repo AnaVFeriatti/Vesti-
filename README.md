@@ -21,7 +21,7 @@ Abra **http://localhost:8081**.
 
 ## Como rodar sem Docker (desenvolvimento)
 
-Com o [.NET 8 SDK](https://dotnet.microsoft.com/download/dotnet/8.0) instalado:
+Com o [.NET 10 SDK](https://dotnet.microsoft.com/download/dotnet/10.0) instalado:
 
 ```bash
 cd src/MontarLooks.Web
