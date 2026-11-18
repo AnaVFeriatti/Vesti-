@@ -18,10 +18,12 @@ public class BulkModel(AppDbContext db, PhotoStorage photos) : PageModel
 
     public async Task<IActionResult> OnPostAsync()
     {
-        var valid = Photos.Where(PhotoStorage.IsAllowed).ToList();
+        var valid = new List<IFormFile>();
+        foreach (var file in Photos)
+            if (await PhotoStorage.IsValidImageAsync(file)) valid.Add(file);
         if (valid.Count == 0)
         {
-            ModelState.AddModelError(string.Empty, "Selecione ao menos uma imagem JPG, PNG, WEBP ou GIF.");
+            ModelState.AddModelError(string.Empty, PhotoStorage.InvalidImageMessage);
             return Page();
         }
 
@@ -42,7 +44,7 @@ public class BulkModel(AppDbContext db, PhotoStorage photos) : PageModel
         await db.SaveChangesAsync();
 
         var skipped = Photos.Count - valid.Count;
-        TempData["Message"] = $"{valid.Count} foto(s) enviadas." + (skipped > 0 ? $" {skipped} ignorada(s) por formato/tamanho." : "") +
+        TempData["Message"] = $"{valid.Count} foto(s) enviadas." + (skipped > 0 ? $" {skipped} ignorada(s) por não serem imagens válidas de até 15 MB." : "") +
                               " Agora complete os detalhes de cada peça.";
         var first = db.ClothingItems.Where(i => i.NeedsReview).OrderBy(i => i.Id).Select(i => i.Id).First();
         return RedirectToPage("Edit", new { id = first });
