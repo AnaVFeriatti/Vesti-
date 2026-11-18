@@ -36,7 +36,7 @@ services:
   # IA de remoção de fundo (rembg / U2-Net), roda 100% no seu PC. Sem porta exposta: só o app usa.
   # Na primeira foto ela baixa o modelo (~170 MB) e guarda no volume rembg-models.
   rembg:
-    image: danielgatis/rembg:latest
+    image: danielgatis/rembg:2.0.87   # versão fixa: atualize de propósito, não por acidente
     restart: unless-stopped
     command: ["s", "--host", "0.0.0.0", "--port", "7000"]
     volumes:
