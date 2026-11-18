@@ -19,7 +19,7 @@ builder.Services.AddDbContext<AppDbContext>(o =>
     }
 });
 
-builder.Services.AddRazorPages();
+builder.Services.AddRazorPages().AddMvcOptions(PortugueseValidation.Apply);
 builder.Services.AddMemoryCache();
 builder.Services.AddHttpClient<WeatherService>(c => c.Timeout = TimeSpan.FromSeconds(8));
 builder.Services.AddSingleton<OutfitGenerator>();
