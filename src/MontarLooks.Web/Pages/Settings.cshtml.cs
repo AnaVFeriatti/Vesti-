@@ -7,7 +7,7 @@ using MontarLooks.Web.Services;
 namespace MontarLooks.Web.Pages;
 
 public class SettingsModel(SettingsService settings, WeatherService weather, DemoDataService demo,
-    MontarLooks.Web.Data.AppDbContext db, PhotoStorage photos, PhotoProcessor processor) : PageModel
+    MontarLooks.Web.Data.AppDbContext db, PhotoStorage photos, PhotoProcessor processor, PhotoBatchQueue batches) : PageModel
 {
     [BindProperty(SupportsGet = true)] public string? Search { get; set; }
 
@@ -105,20 +105,9 @@ public class SettingsModel(SettingsService settings, WeatherService weather, Dem
 
     public bool AiBackgroundRemoval => !string.IsNullOrWhiteSpace(processor.RemoveBgUrl);
 
-    /// <summary>Re-runs crop / background cleanup on every photo, from the kept originals.</summary>
-    public async Task<IActionResult> OnPostReprocessPhotosAsync(CancellationToken ct)
-    {
-        // Pieces set to the untouched original by hand keep it.
-        var items = db.ClothingItems.Where(i => i.PhotoFileName != null).ToList()
-            .Where(i => !PhotoStorage.IsUntouchedOriginal(i.PhotoFileName)).ToList();
-        foreach (var i in items)
-        {
-            i.PhotoFileName = await photos.ReprocessAsync(i.PhotoFileName, i.Category, ct);
-            await db.SaveChangesAsync(ct); // save as we go: a long run can be interrupted
-        }
-        TempData["Message"] = $"{items.Count} foto(s) retocadas.";
-        return RedirectToPage("/Wardrobe/Index");
-    }
+    /// <summary>Re-runs crop / background cleanup on every photo, in the background, from the kept originals.</summary>
+    public IActionResult OnPostReprocessPhotos() =>
+        RedirectToPage("/Wardrobe/Bulk", new { job = batches.EnqueueReprocess().Id });
 
     public async Task<IActionResult> OnPostRemoveDemoAsync()
     {

@@ -33,3 +33,12 @@
 }
 @keyframes pt-spin { to { transform: rotate(360deg); } }
 @media (prefers-reduced-motion: reduce) { .pt-tools.is-busy .pt-status::before { animation: none; } }
+
+/* Progresso dos lotes de fotos (Pages/Wardrobe/Bulk). */
+.batch { gap: .25rem; }
+.batch-bar { height: .8rem; border-radius: 999px; overflow: hidden; background: var(--pink-soft, #fde4ee); border: 1px solid var(--line, #f6d3df); }
+.batch-bar span { display: block; height: 100%; width: 0; border-radius: inherit; background: var(--pink, #c2185b); transition: width .35s ease; }
+.batch-count { margin: .5rem 0 0; font-weight: 700; color: var(--purple, #7b3fa0); }
+.batch-status { min-height: 1.5em; color: var(--muted, #76574c); }
+.batch.is-failed .batch-bar span { background: var(--brown, #6d4c41); }
+@media (prefers-reduced-motion: reduce) { .batch-bar span { transition: none; } }

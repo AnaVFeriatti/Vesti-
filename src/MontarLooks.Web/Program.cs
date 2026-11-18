@@ -26,6 +26,8 @@ builder.Services.AddSingleton<OutfitGenerator>();
 builder.Services.AddHttpClient("rembg");
 builder.Services.AddSingleton<PhotoProcessor>();
 builder.Services.AddSingleton<PhotoStorage>();
+builder.Services.AddSingleton<PhotoBatchQueue>();
+builder.Services.AddHostedService<PhotoBatchWorker>();
 builder.Services.AddScoped<AnalyticsService>();
 builder.Services.AddScoped<SettingsService>();
 builder.Services.AddScoped<JsonStore>();

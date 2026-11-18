@@ -23,6 +23,9 @@ public class PhotoStorage
     public string RootPath { get; }
     public string OriginalsPath { get; }
 
+    /// <summary>Área temporária dos lotes. Fica ao lado de RootPath porque tudo em RootPath é público em /uploads.</summary>
+    public string BatchStagingPath => Path.TrimEndingDirectorySeparator(RootPath) + "-lote";
+
     public PhotoStorage(IConfiguration config, IWebHostEnvironment env, PhotoProcessor processor, ILogger<PhotoStorage> log)
     {
         _processor = processor;
@@ -65,12 +68,18 @@ public class PhotoStorage
     public async Task<string> SaveAsync(IFormFile file, Category? category, CancellationToken ct = default)
     {
         if (!await IsValidImageAsync(file, ct)) throw new InvalidOperationException(InvalidImageMessage);
-        var id = Guid.NewGuid().ToString("N");
         using var buffer = new MemoryStream();
         await file.CopyToAsync(buffer, ct);
-        var bytes = buffer.ToArray();
-        await File.WriteAllBytesAsync(Path.Combine(OriginalsPath, id + Path.GetExtension(file.FileName).ToLowerInvariant()), bytes, ct);
-        return await WriteProcessedAsync(id, bytes, Path.GetExtension(file.FileName).ToLowerInvariant(), category, ct);
+        return await SaveBytesAsync(buffer.ToArray(), Path.GetExtension(file.FileName), category, ct);
+    }
+
+    /// <summary>Grava uma imagem já validada: guarda o original e gera a foto tratada.</summary>
+    public async Task<string> SaveBytesAsync(byte[] bytes, string extension, Category? category, CancellationToken ct = default)
+    {
+        var id = Guid.NewGuid().ToString("N");
+        var ext = extension.ToLowerInvariant();
+        await File.WriteAllBytesAsync(Path.Combine(OriginalsPath, id + ext), bytes, ct);
+        return await WriteProcessedAsync(id, bytes, ext, category, ct);
     }
 
     /// <summary>Re-runs the processing from the kept original (or the current file for old uploads).</summary>
