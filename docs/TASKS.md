@@ -20,3 +20,17 @@ e o resumo final ficam com o agente principal. Nada de sudo, docker ou push dura
 | 8 | Menu com os nomes novos: Meu Ateliê (look do dia/provador), Meu Closet (guarda-roupa), Agenda Fashion (semana), Me Surpreenda (look sorteado, roleta gira sozinha), Cesto de Roupa (lavanderia), Sobre Mim (configurações). Títulos, links e README acompanham | feito |
 | 9 | Fotos ainda tortas: saia de tweed pink e blusa preta com babados | feito (girada e limpa pela tela de edição) |
 | 10 | Tudo em português: "Ferramentas" → Mais Mimos, Wrapped → Retrospectiva do mês, Analytics → Estatísticas, Streetwear → Urbano (nomes escolhidos pelo Hoffmann ficam) | feito |
+
+## Rodada de 18/11/2026
+
+| # | Tarefa | Status |
+|---|---|---|
+| 11 | Dependências: atualizar pacotes com alerta de segurança e fixar a versão do rembg | parcial: ImageSharp ficou na 3.1.12, com alertas abertos, porque as versões corrigidas exigem licença da Six Labors no build Release |
+| 12 | Migrar web, testes e Dockerfile para .NET 10 | feito |
+| 13 | Mensagens de validação em português do Brasil | feito |
+| 14 | Atualizar os pacotes de teste, mantendo o EF Core InMemory | feito |
+| 15 | Upload: validar o conteúdo real da imagem e só apagar a foto antiga depois de salvar a nova | feito |
+| 16 | Envio em lote e retoque geral em segundo plano, com barra de progresso | feito |
+| 17 | Dividir `OutfitGenerator` e `PhotoProcessor` em classes menores, sem mudar o comportamento | feito |
+| 18 | Atualizar README e documentos de tarefas | feito |
+| 19 | Decidir como corrigir os alertas do ImageSharp: obter licença ou trocar de biblioteca | pendente |
