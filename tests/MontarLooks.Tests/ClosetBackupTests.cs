@@ -10,7 +10,15 @@ namespace MontarLooks.Tests;
 
 public class ClosetBackupTests(AppFactory factory) : IClassFixture<AppFactory>
 {
-    private static readonly byte[] FakePhoto = Enumerable.Range(0, 300).Select(i => (byte)i).ToArray();
+    private static readonly byte[] FakePhoto = SmallPng();
+
+    private static byte[] SmallPng()
+    {
+        using var image = new SixLabors.ImageSharp.Image<SixLabors.ImageSharp.PixelFormats.Rgba32>(8, 8);
+        using var ms = new MemoryStream();
+        SixLabors.ImageSharp.ImageExtensions.SaveAsPng(image, ms);
+        return ms.ToArray();
+    }
 
     private static ClothingItem Blouse() => new()
     {
@@ -137,5 +145,26 @@ public class ClosetBackupTests(AppFactory factory) : IClassFixture<AppFactory>
         var backup = scope.ServiceProvider.GetRequiredService<ClosetBackupService>();
         var r = await backup.ImportZipAsync(new MemoryStream(Encoding.UTF8.GetBytes("não sou zip")));
         Assert.False(r.Ok);
+    }
+
+    [Fact]
+    public async Task Import_ignores_a_photo_that_is_not_an_image()
+    {
+        using var scope = factory.Services.CreateScope();
+        var backup = scope.ServiceProvider.GetRequiredService<ClosetBackupService>();
+        await scope.ServiceProvider.GetRequiredService<AppDbContext>().Database.EnsureCreatedAsync();
+        var csv = "id,nome,categoria,cor_principal,calor,foto\n,Blusa falsa,Top,preto,2,falsa.jpg\n";
+        using var zip = new MemoryStream();
+        using (var z = new ZipArchive(zip, ZipArchiveMode.Create, leaveOpen: true))
+        {
+            await using (var w = z.CreateEntry("pecas.csv").Open()) await w.WriteAsync(Encoding.UTF8.GetBytes(csv));
+            await using (var w = z.CreateEntry("fotos/falsa.jpg").Open()) await w.WriteAsync(Encoding.UTF8.GetBytes("não sou foto"));
+        }
+        zip.Position = 0;
+
+        var r = await backup.ImportZipAsync(zip);
+
+        Assert.Equal(0, r.PhotosImported);
+        Assert.Contains(r.Warnings, w => w.Contains("não é uma imagem válida"));
     }
 }

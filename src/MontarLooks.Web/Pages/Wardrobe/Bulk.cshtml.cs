@@ -1,50 +1,61 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
-using MontarLooks.Web.Data;
 using MontarLooks.Web.Models;
 using MontarLooks.Web.Services;
 
 namespace MontarLooks.Web.Pages.Wardrobe;
 
-/// <summary>Upload many photos at once; each becomes a draft item to be completed later.</summary>
+/// <summary>Envia muitas fotos de uma vez e acompanha o lote, que é processado em segundo plano.</summary>
 [RequestSizeLimit(300 * 1024 * 1024)]
 [RequestFormLimits(MultipartBodyLengthLimit = 300 * 1024 * 1024)]
-public class BulkModel(AppDbContext db, PhotoStorage photos) : PageModel
+public class BulkModel(PhotoBatchQueue batches) : PageModel
 {
     [BindProperty] public List<IFormFile> Photos { get; set; } = [];
     [BindProperty] public Category Category { get; set; } = Category.Top;
 
-    public void OnGet() { }
+    /// <summary>O lote mostrado na página, quando há um.</summary>
+    public PhotoBatchStatus? Batch { get; private set; }
+    /// <summary>O link aponta para um lote que não existe mais (o app pode ter reiniciado).</summary>
+    public bool BatchMissing { get; private set; }
 
-    public async Task<IActionResult> OnPostAsync()
+    public void OnGet(Guid? job)
     {
-        var valid = Photos.Where(PhotoStorage.IsAllowed).ToList();
+        if (job is not { } id) return;
+        Batch = batches.Find(id)?.Status;
+        BatchMissing = Batch is null;
+    }
+
+    /// <summary>Progresso do lote, consultado pelo script da página.</summary>
+    public IActionResult OnGetStatus(Guid id)
+    {
+        if (batches.Find(id)?.Status is not { } s) return NotFound();
+        Response.Headers.CacheControl = "no-store";
+        return new JsonResult(new
+        {
+            state = s.State.ToString().ToLowerInvariant(),
+            finished = s.Finished,
+            total = s.Total,
+            processed = s.Processed,
+            failed = s.Failed,
+            percent = s.Percent,
+            message = s.Message,
+            nextUrl = s.NextUrl
+        });
+    }
+
+    public async Task<IActionResult> OnPostAsync(CancellationToken ct)
+    {
+        var valid = new List<IFormFile>();
+        foreach (var file in Photos)
+            if (await PhotoStorage.IsValidImageAsync(file, ct)) valid.Add(file);
+
         if (valid.Count == 0)
         {
-            ModelState.AddModelError(string.Empty, "Selecione ao menos uma imagem JPG, PNG, WEBP ou GIF.");
+            ModelState.AddModelError(string.Empty, PhotoStorage.InvalidImageMessage);
             return Page();
         }
 
-        var n = 1;
-        foreach (var file in valid)
-        {
-            var name = Path.GetFileNameWithoutExtension(file.FileName);
-            db.ClothingItems.Add(new ClothingItem
-            {
-                Name = string.IsNullOrWhiteSpace(name) || name.Length > 60 ? $"Peça nova {n}" : name,
-                Category = Category,
-                PrimaryColor = "preto",
-                PhotoFileName = await photos.SaveAsync(file, Category),
-                NeedsReview = true
-            });
-            n++;
-        }
-        await db.SaveChangesAsync();
-
-        var skipped = Photos.Count - valid.Count;
-        TempData["Message"] = $"{valid.Count} foto(s) enviadas." + (skipped > 0 ? $" {skipped} ignorada(s) por formato/tamanho." : "") +
-                              " Agora complete os detalhes de cada peça.";
-        var first = db.ClothingItems.Where(i => i.NeedsReview).OrderBy(i => i.Id).Select(i => i.Id).First();
-        return RedirectToPage("Edit", new { id = first });
+        var job = await batches.EnqueueUploadAsync(valid, Category, Photos.Count - valid.Count, ct);
+        return RedirectToPage(new { job = job.Id });
     }
 }

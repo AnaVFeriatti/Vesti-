@@ -253,6 +253,10 @@ public class ClosetBackupService(AppDbContext db, PhotoStorage photos)
                     await using (var s = entry.Open()) await s.CopyToAsync(ms, ct);
                     bytes = ms.ToArray();
                 }
+                using (var content = new MemoryStream(bytes))
+                    if (!await PhotoStorage.IsImageContentAsync(content, ct))
+                    { result.Warnings.Add($"Linha {line}: \"{photoName}\" não é uma imagem válida e foi ignorada."); continue; }
+
                 var currentPath = PhotoPath(target.PhotoFileName);
                 if (currentPath != null && File.Exists(currentPath) && (await File.ReadAllBytesAsync(currentPath, ct)).AsSpan().SequenceEqual(bytes))
                     continue; // same photo already there

@@ -1,4 +1,9 @@
 using MontarLooks.Web.Models;
+using SixLabors.ImageSharp;
+using SixLabors.ImageSharp.Formats.Gif;
+using SixLabors.ImageSharp.Formats.Jpeg;
+using SixLabors.ImageSharp.Formats.Png;
+using SixLabors.ImageSharp.Formats.Webp;
 
 namespace MontarLooks.Web.Services;
 
@@ -10,12 +15,16 @@ public class PhotoStorage
 {
     private static readonly HashSet<string> Allowed = [".jpg", ".jpeg", ".png", ".webp", ".gif"];
     public const long MaxBytes = 15 * 1024 * 1024;
+    public const string InvalidImageMessage = "Esse arquivo não é uma imagem válida. Envie uma foto JPG, PNG, WEBP ou GIF de até 15 MB.";
 
     private readonly PhotoProcessor _processor;
     private readonly ILogger<PhotoStorage> _log;
 
     public string RootPath { get; }
     public string OriginalsPath { get; }
+
+    /// <summary>Área temporária dos lotes. Fica ao lado de RootPath porque tudo em RootPath é público em /uploads.</summary>
+    public string BatchStagingPath => Path.TrimEndingDirectorySeparator(RootPath) + "-lote";
 
     public PhotoStorage(IConfiguration config, IWebHostEnvironment env, PhotoProcessor processor, ILogger<PhotoStorage> log)
     {
@@ -31,18 +40,46 @@ public class PhotoStorage
     public static bool IsAllowed(IFormFile file) =>
         file.Length > 0 && file.Length <= MaxBytes && Allowed.Contains(Path.GetExtension(file.FileName).ToLowerInvariant());
 
+    /// <summary>Confere extensão, tamanho e o conteúdo real do arquivo (não basta se chamar .jpg).</summary>
+    public static async Task<bool> IsValidImageAsync(IFormFile file, CancellationToken ct = default)
+    {
+        if (!IsAllowed(file)) return false;
+        await using var stream = file.OpenReadStream();
+        return await IsImageContentAsync(stream, ct);
+    }
+
+    /// <summary>True quando o conteúdo é mesmo um JPEG, PNG, WEBP ou GIF. Lê só o cabeçalho da imagem.</summary>
+    public static async Task<bool> IsImageContentAsync(Stream content, CancellationToken ct = default)
+    {
+        try
+        {
+            var info = await Image.IdentifyAsync(content, ct);
+            return info.Metadata.DecodedImageFormat is JpegFormat or PngFormat or WebpFormat or GifFormat;
+        }
+        catch (Exception ex) when (ex is ImageFormatException or NotSupportedException or InvalidDataException or EndOfStreamException)
+        {
+            return false;
+        }
+    }
+
     public Task<string> SaveAsync(IFormFile file, CancellationToken ct = default) => SaveAsync(file, null, ct);
 
     /// <param name="category">Optional hint for the retouch (clothes are stood upright, hangers removed).</param>
     public async Task<string> SaveAsync(IFormFile file, Category? category, CancellationToken ct = default)
     {
-        if (!IsAllowed(file)) throw new InvalidOperationException("Formato de imagem não suportado ou arquivo muito grande.");
-        var id = Guid.NewGuid().ToString("N");
+        if (!await IsValidImageAsync(file, ct)) throw new InvalidOperationException(InvalidImageMessage);
         using var buffer = new MemoryStream();
         await file.CopyToAsync(buffer, ct);
-        var bytes = buffer.ToArray();
-        await File.WriteAllBytesAsync(Path.Combine(OriginalsPath, id + Path.GetExtension(file.FileName).ToLowerInvariant()), bytes, ct);
-        return await WriteProcessedAsync(id, bytes, Path.GetExtension(file.FileName).ToLowerInvariant(), category, ct);
+        return await SaveBytesAsync(buffer.ToArray(), Path.GetExtension(file.FileName), category, ct);
+    }
+
+    /// <summary>Grava uma imagem já validada: guarda o original e gera a foto tratada.</summary>
+    public async Task<string> SaveBytesAsync(byte[] bytes, string extension, Category? category, CancellationToken ct = default)
+    {
+        var id = Guid.NewGuid().ToString("N");
+        var ext = extension.ToLowerInvariant();
+        await File.WriteAllBytesAsync(Path.Combine(OriginalsPath, id + ext), bytes, ct);
+        return await WriteProcessedAsync(id, bytes, ext, category, ct);
     }
 
     /// <summary>Re-runs the processing from the kept original (or the current file for old uploads).</summary>

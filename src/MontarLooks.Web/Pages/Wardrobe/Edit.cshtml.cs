@@ -35,8 +35,8 @@ public class EditModel(AppDbContext db, PhotoStorage photos) : PageModel
 
     public async Task<IActionResult> OnPostAsync()
     {
-        if (Photo != null && !PhotoStorage.IsAllowed(Photo))
-            ModelState.AddModelError(nameof(Photo), "Use uma imagem JPG, PNG, WEBP ou GIF de até 15 MB.");
+        if (Photo != null && !await PhotoStorage.IsValidImageAsync(Photo))
+            ModelState.AddModelError(nameof(Photo), PhotoStorage.InvalidImageMessage);
         if (!ModelState.IsValid) return Page();
 
         ClothingItem entity;
@@ -62,13 +62,26 @@ public class EditModel(AppDbContext db, PhotoStorage photos) : PageModel
         }
         entity.NeedsReview = false;
 
+        // A foto antiga só sai depois que a nova estiver gravada e ligada à peça.
+        var oldPhoto = entity.PhotoFileName;
+        string? newPhoto = null;
         if (Photo != null)
         {
-            photos.Delete(entity.PhotoFileName);
-            entity.PhotoFileName = await photos.SaveAsync(Photo, entity.Category);
+            newPhoto = await photos.SaveAsync(Photo, entity.Category);
+            entity.PhotoFileName = newPhoto;
         }
 
-        await db.SaveChangesAsync();
+        try
+        {
+            await db.SaveChangesAsync();
+        }
+        catch
+        {
+            photos.Delete(newPhoto);
+            throw;
+        }
+        if (newPhoto != null) photos.Delete(oldPhoto);
+
         TempData["Message"] = $"\"{entity.Name}\" salva.";
         var next = await db.ClothingItems.Where(i => i.NeedsReview).OrderBy(i => i.Id).Select(i => (int?)i.Id).FirstOrDefaultAsync();
         return next is { } n ? RedirectToPage(new { id = n }) : RedirectToPage("Index");

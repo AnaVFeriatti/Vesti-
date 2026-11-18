@@ -7,7 +7,7 @@ using MontarLooks.Web.Services;
 namespace MontarLooks.Web.Pages;
 
 public class SettingsModel(SettingsService settings, WeatherService weather, DemoDataService demo,
-    MontarLooks.Web.Data.AppDbContext db, PhotoStorage photos, PhotoProcessor processor) : PageModel
+    MontarLooks.Web.Data.AppDbContext db, PhotoStorage photos, PhotoProcessor processor, PhotoBatchQueue batches) : PageModel
 {
     [BindProperty(SupportsGet = true)] public string? Search { get; set; }
 
@@ -75,41 +75,39 @@ public class SettingsModel(SettingsService settings, WeatherService weather, Dem
         prefs.SkinTone = Hex(skinTone, prefs.SkinTone);
         prefs.HairColor = Hex(hairColor, prefs.HairColor);
         prefs.Hair = hair;
-        if (removeFace || (face != null && PhotoStorage.IsAllowed(face)))
+
+        // As fotos antigas só saem depois que as novas estiverem gravadas e as preferências salvas.
+        var replaced = new List<string?>();
+        var rejected = false;
+        async Task<string?> ChooseAsync(IFormFile? file, bool remove, string? current)
         {
-            photos.Delete(prefs.FacePhoto);
-            prefs.FacePhoto = null;
+            if (file != null && await PhotoStorage.IsValidImageAsync(file))
+            {
+                replaced.Add(current);
+                return await photos.SaveAsync(file, Category.Accessory); // no hanger / rotation logic for people
+            }
+            rejected |= file != null;
+            if (!remove) return current;
+            replaced.Add(current);
+            return null;
         }
-        if (face != null && PhotoStorage.IsAllowed(face))
-            prefs.FacePhoto = await photos.SaveAsync(face, Category.Accessory); // no hanger / rotation logic for people
-        if (removeBody || (body != null && PhotoStorage.IsAllowed(body)))
-        {
-            photos.Delete(prefs.BodyPhoto);
-            prefs.BodyPhoto = null;
-        }
-        if (body != null && PhotoStorage.IsAllowed(body))
-            prefs.BodyPhoto = await photos.SaveAsync(body, Category.Accessory);
+
+        prefs.FacePhoto = await ChooseAsync(face, removeFace, prefs.FacePhoto);
+        prefs.BodyPhoto = await ChooseAsync(body, removeBody, prefs.BodyPhoto);
         await settings.SetPreferencesAsync(prefs);
-        TempData["Message"] = "Provador atualizado. Veja você nos looks da página inicial!";
+        foreach (var old in replaced) photos.Delete(old);
+
+        TempData["Message"] = rejected
+            ? "Provador salvo, mas ignorei um arquivo. " + PhotoStorage.InvalidImageMessage
+            : "Provador atualizado. Veja você nos looks da página inicial!";
         return RedirectToPage();
     }
 
     public bool AiBackgroundRemoval => !string.IsNullOrWhiteSpace(processor.RemoveBgUrl);
 
-    /// <summary>Re-runs crop / background cleanup on every photo, from the kept originals.</summary>
-    public async Task<IActionResult> OnPostReprocessPhotosAsync(CancellationToken ct)
-    {
-        // Pieces set to the untouched original by hand keep it.
-        var items = db.ClothingItems.Where(i => i.PhotoFileName != null).ToList()
-            .Where(i => !PhotoStorage.IsUntouchedOriginal(i.PhotoFileName)).ToList();
-        foreach (var i in items)
-        {
-            i.PhotoFileName = await photos.ReprocessAsync(i.PhotoFileName, i.Category, ct);
-            await db.SaveChangesAsync(ct); // save as we go: a long run can be interrupted
-        }
-        TempData["Message"] = $"{items.Count} foto(s) retocadas.";
-        return RedirectToPage("/Wardrobe/Index");
-    }
+    /// <summary>Re-runs crop / background cleanup on every photo, in the background, from the kept originals.</summary>
+    public IActionResult OnPostReprocessPhotos() =>
+        RedirectToPage("/Wardrobe/Bulk", new { job = batches.EnqueueReprocess().Id });
 
     public async Task<IActionResult> OnPostRemoveDemoAsync()
     {

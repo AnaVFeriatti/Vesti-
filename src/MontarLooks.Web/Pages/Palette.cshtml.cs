@@ -58,10 +58,10 @@ public class PaletteModel(PaletteService palettes, SettingsService settings, Pho
     }
 
     /// <summary>Analyses a photo picked on this page. Nothing is stored: the bytes stay in memory.</summary>
-    public IActionResult OnPostAnalyze(IFormFile? photo)
+    public async Task<IActionResult> OnPostAnalyzeAsync(IFormFile? photo)
     {
-        if (photo == null || !PhotoStorage.IsAllowed(photo))
-            return new JsonResult(new { ok = false, message = "Envie uma imagem JPG, PNG, WEBP ou GIF de até 15 MB." });
+        if (photo == null || !await PhotoStorage.IsValidImageAsync(photo))
+            return new JsonResult(new { ok = false, message = PhotoStorage.InvalidImageMessage });
         try
         {
             using var s = photo.OpenReadStream();

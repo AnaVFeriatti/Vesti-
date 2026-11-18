@@ -20,3 +20,7 @@ sem conflito. Dados novos ficam em JSON na tabela Settings via `Services/JsonSto
 | Wrapped do mês | Wrapped | agente B | feito |
 | Paleta pessoal (coloração) | Palette | agente C | feito |
 | Fotos: de pé, sem cabide, embelezadas | PhotoProcessor | agente D | feito |
+| Validação real das fotos enviadas | Wardrobe/Edit, Wardrobe/Bulk, Settings, Palette | principal | feito |
+| Fotos em lote em segundo plano, com progresso | Wardrobe/Bulk, Settings | principal | feito |
+| Plataforma .NET 10 | todo o projeto | principal | feito |
+| ImageSharp sem alertas de segurança (licença ou outra biblioteca) | Services/Photo* | a definir | pendente |

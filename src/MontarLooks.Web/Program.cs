@@ -19,13 +19,15 @@ builder.Services.AddDbContext<AppDbContext>(o =>
     }
 });
 
-builder.Services.AddRazorPages();
+builder.Services.AddRazorPages().AddMvcOptions(PortugueseValidation.Apply);
 builder.Services.AddMemoryCache();
 builder.Services.AddHttpClient<WeatherService>(c => c.Timeout = TimeSpan.FromSeconds(8));
 builder.Services.AddSingleton<OutfitGenerator>();
 builder.Services.AddHttpClient("rembg");
 builder.Services.AddSingleton<PhotoProcessor>();
 builder.Services.AddSingleton<PhotoStorage>();
+builder.Services.AddSingleton<PhotoBatchQueue>();
+builder.Services.AddHostedService<PhotoBatchWorker>();
 builder.Services.AddScoped<AnalyticsService>();
 builder.Services.AddScoped<SettingsService>();
 builder.Services.AddScoped<JsonStore>();
